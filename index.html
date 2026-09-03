@@ -531,15 +531,34 @@
     }
 
     function copiarTextoCombinado(datos1, datos2, datos3, tituloGeneral, datos4) {
-        const secciones = [];
-        if (datos1?.length) secciones.push("📊 Top 2 agentes con más respuestas\n" + datos1.slice(0,2).map(d => ` • ${d.Agente}: ${d.Veces} respuestas`).join('\n'));
-        if (datos2?.length) secciones.push("📊 Top 2 agentes por suma de minutos\n" + datos2.slice(0,2).map(d => ` • ${d.Agente}: ${d.TotalMinutos} min`).join('\n'));
-        if (datos3?.length) secciones.push("📊 Top 2 mayores tiempos registrados\n" + datos3.slice(0,2).map(d => ` • ${d.Agente}: ${d.TiempoMin} min`).join('\n'));
-        if (datos4?.length) secciones.push("📊 Top 2 supervisores con más casos\n" + datos4.slice(0,2).map(d => ` • ${d.Supervisor}: ${d.Veces} respuestas`).join('\n'));
-        if (!secciones.length) { alert('No hay datos para generar el texto'); return; }
-        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\n✅ Quedamos atentos al seguimiento y las acciones correspondientes.";
-        navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => alert('No se pudo copiar el texto'));
+    const secciones = [];
+    if (datos1 && datos1.length > 0) {
+        const top2 = datos1.slice(0, 2);
+        const lineas = top2.map(d => ` • ${d.Agente}: ${d.Veces} respuestas`);
+        secciones.push("📊 Top 2 agentes con más respuestas\n" + lineas.join('\n'));
     }
+    if (datos2 && datos2.length > 0) {
+        const top2 = datos2.slice(0, 2);
+        const lineas = top2.map(d => ` • ${d.Agente}: ${d.TotalMinutos} min`);
+        secciones.push("📊 Top 2 agentes con mayor tiempo acumulado en respuestas superiores a 10 minutos\n" + lineas.join('\n'));
+    }
+    if (datos3 && datos3.length > 0) {
+        const top2 = datos3.slice(0, 2);
+        const lineas = top2.map(d => ` • ${d.Agente}: ${d.TiempoMin} min`);
+        secciones.push("📊 Top 2 mayores tiempos registrados\n" + lineas.join('\n'));
+    }
+    // Se elimina la sección de supervisores (datos4)
+
+    if (secciones.length === 0) {
+        alert('No hay datos para generar el texto');
+        return;
+    }
+    const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\n✅ Quedamos atentos al seguimiento y las acciones correspondientes.";
+    navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => {
+        console.error('Error al copiar texto: ', err);
+        alert('No se pudo copiar el texto');
+    });
+}
 
     document.getElementById('btnCopiarTexto1').addEventListener('click', () => copiarTextoCombinado(datosGrafico1, datosGrafico2, datosGrafico3, "📢 Compartimos el detalle de los tiempos elevados en primeras respuestas:", datosGrafico4));
     document.getElementById('btnDescargarTabla1').addEventListener('click', () => descargarExcel(currentFilteredTable1, 'tabla_primera_respuesta.xlsx'));
