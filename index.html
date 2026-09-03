@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoría de Respuestas</title>
+
+    <!-- Librerías -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js y plugin de etiquetas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <style>
+        :root {
+            --color-primario: #EBD59B;
+            --color-primario-oscuro: #c9b57a;
+            --color-texto: #333;
+            --color-fondo: #f9f5eb;
+            --color-blanco: #fff;
+            --color-borde: #ddd;
+            --color-rojo: #e74c3c;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--color-fondo);
+            color: var(--color-texto);
+            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--color-blanco);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: var(--color-primario-oscuro);
+            font-size: 2rem;
+            margin-bottom: 10px;
+            border-bottom: 3px solid var(--color-primario);
+            padding-bottom: 10px;
+        }
+        .subtitulo { color: #666; margin-bottom: 25px; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--color-primario);
+            padding-bottom: 10px;
+        }
+        .tab {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s;
+        }
+        .tab:hover { background-color: #f0ead6; }
+        .tab.active {
+            background-color: var(--color-primario);
+            color: #5a4a1f;
+            border-bottom: 2px solid var(--color-primario-oscuro);
+        }
+
+        .zona-carga { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
+        .boton-carga {
+            background-color: var(--color-primario);
+            color: #5a4a1f;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .boton-carga:hover { background-color: var(--color-primario-oscuro); }
+        .boton-carga svg { width: 20px; height: 20px; fill: currentColor; }
+        input[type="file"] { display: none; }
+        .estado-carga { margin-top: 15px; font-size: 0.9rem; color: #666; min-height: 24px; }
+        .barra-progreso { width: 100%; height: 8px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px; display: none; }
+        .barra-progreso .progreso { height: 100%; width: 0%; background: var(--color-primario-oscuro); border-radius: 10px; transition: width 0.3s ease; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--color-primario-oscuro); animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .filtro-skill { margin: 15px 0; display: flex; align-items: center; gap: 10px; }
+        .filtro-skill select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--color-borde);
+            background: var(--color-blanco);
+            min-width: 200px;
+            font-size: 1rem;
+        }
+
+        /* Tablas con scroll y encabezado fijo */
+        .tabla-contenedor {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; background: var(--color-blanco); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th {
+            background: var(--color-primario);
+            color: #5a4a1f;
+            font-weight: 600;
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--color-primario-oscuro);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover { background: #e0d2a7; }
+        th .indicador { font-size: 0.8rem; margin-left: 5px; color: #5a4a1f; }
+        td { padding: 12px; border-bottom: 1px solid var(--color-borde); vertical-align: middle; }
+        tr:nth-child(even) { background-color: #fcf9f2; }
+        tr:hover { background-color: #f5efdd; }
+        .rojo { color: var(--color-rojo); font-weight: bold; }
+        #resumen, #resumenChat, #resumenCierre { margin-top: 20px; font-size: 1.1rem; font-weight: 600; background: #f0ead6; padding: 12px 20px; border-radius: 8px; display: inline-block; }
+        .mensaje-vacio { text-align: center; padding: 30px; font-size: 1.2rem; color: #999; }
+
+        /* Dashboard de gráficos */
+        #graficosContainer, #graficosContainerChat {
+            margin-top: 40px;
+            border-top: 2px solid var(--color-primario);
+            padding-top: 20px;
+        }
+        #graficosContainer h3, #graficosContainerChat h3 {
+            color: var(--color-primario-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .graficos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .grafico-card {
+            background: var(--color-blanco);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        .grafico-card:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            transform: translateY(-3px);
+        }
+        .grafico-card canvas {
+            width: 100% !important;
+            height: 280px !important;
+            max-height: 280px;
+        }
+        .dashboard-acciones {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        .btn-dashboard {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-copiar-texto {
+            background-color: #25D366;
+            color: white;
+        }
+        .btn-copiar-texto:hover {
+            background-color: #1ebe5b;
+        }
+        .btn-descargar-tabla {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-descargar-tabla:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📋 Auditoría de Respuestas</h1>
+    <p class="subtitulo">Analice conversaciones con tiempos altos en primera respuesta de asesor, en chat y cierres sin respuesta.</p>
+
+    <!-- Pestañas -->
+    <div class="tabs">
+        <button class="tab active" data-tab="tab1">Auditoría Primera Respuesta</button>
+        <button class="tab" data-tab="tab2">Tiempos de respuesta en CHAT</button>
+        <button class="tab" data-tab="tab3">Cierre sin respuesta</button>
+    </div>
+
+    <!-- Contenido Pestaña 1 -->
+    <div id="tab1" class="tab-content">
+        <div class="zona-carga">
+            <label for="archivos1" class="boton-carga" id="botonCarga1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                Seleccionar archivos CSV
+            </label>
+            <input type="file" id="archivos1" multiple accept=".csv">
+            <div class="estado-carga" id="estadoCarga1">Cargando datos de supervisores...</div>
+            <div class="barra-progreso" id="barraProgreso1">
+                <div class="progreso" id="progreso1"></div>
+            </div>
+        </div>
+
+        <div class="filtro-skill">
+            <label for="filtroSkill1"><strong>Filtrar por Skill:</strong></label>
+            <select id="filtroSkill1" multiple size="3"></select>
+        </div>
+
+        <div id="resumen"></div>
+
+        <div class="tabla-contenedor">
+            <table id="tabla1">
+                <thead>
+                    <tr>
+                        <th data-col="0">Asignado <span class="indicador"></span></th>
+                        <th data-col="1">Móvil <span class="indicador"></span></th>
+                        <th data-col="2">Asesor <span class="indicador"></span></th>
+                        <th data-col="3">Supervisor <span class="indicador"></span></th>
+                        <th data-col="4">Skill <span class="indicador"></span></th>
+                        <th data-col="5">Fecha Primera Respuesta <span class="indicador"></span></th>
+                        <th data-col="6">Tiempo Espera (Min) <span class="indicador"></span></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Dashboard de gráficos tabla 1 -->
+        <div id="graficosContainer">
+            <h3>📊 Estadísticas de Tiempos Altos Primeras respuestas</h3>
+            <div class="graficos-grid">
+                <div class="grafico-card">
+                    <canvas id="grafico1"></canvas>
+                </div>
+                <div class="grafico-card">
+                    <canvas id="grafico2"></canvas>
+                </div>
+                <div class="grafico-card">
+                    <canvas id="grafico3"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-acciones">
+                <button class="btn-dashboard btn-copiar-texto" id="btnCopiarTexto1">📋 Copiar texto WhatsApp (todo)</button>
+                <button class="btn-dashboard btn-descargar-tabla" id="btnDescargarTabla1">📥 Descargar Excel de la tabla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Pestaña 2 -->
+    <div id="tab2" class="tab-content" style="display: none;">
+        <div class="zona-carga">
+            <label for="archivos2" class="boton-carga" id="botonCarga2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                Seleccionar archivos CSV
+            </label>
+            <input type="file" id="archivos2" multiple accept=".csv">
+            <div class="estado-carga" id="estadoCarga2">Cargue archivos para analizar chat.</div>
+            <div class="barra-progreso" id="barraProgreso2">
+                <div class="progreso" id="progreso2"></div>
+            </div>
+        </div>
+
+        <div class="filtro-skill">
+            <label for="filtroSkill2"><strong>Filtrar por Skill:</strong></label>
+            <select id="filtroSkill2" multiple size="3"></select>
+        </div>
+
+        <div id="resumenChat"></div>
+
+        <div class="tabla-contenedor">
+            <table id="tabla2">
+                <thead>
+                    <tr>
+                        <th data-col="0">Hora de respuesta de cliente <span class="indicador"></span></th>
+                        <th data-col="1">Móvil <span class="indicador"></span></th>
+                        <th data-col="2">Asesor <span class="indicador"></span></th>
+                        <th data-col="3">Supervisor <span class="indicador"></span></th>
+                        <th data-col="4">Skill <span class="indicador"></span></th>
+                        <th data-col="5">Fecha Respuesta Asesor <span class="indicador"></span></th>
+                        <th data-col="6">Tiempo Espera (Min) <span class="indicador"></span></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="mensajeChat" class="mensaje-vacio" style="display: none;">Cargar archivo</div>
+
+        <!-- Dashboard de gráficos tabla 2 -->
+        <div id="graficosContainerChat">
+            <h3>📊 Estadísticas de Tiempos Altos en Chat</h3>
+            <div class="graficos-grid">
+                <div class="grafico-card">
+                    <canvas id="grafico1Chat"></canvas>
+                </div>
+                <div class="grafico-card">
+                    <canvas id="grafico2Chat"></canvas>
+                </div>
+                <div class="grafico-card">
+                    <canvas id="grafico3Chat"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-acciones">
+                <button class="btn-dashboard btn-copiar-texto" id="btnCopiarTexto2">📋 Copiar texto WhatsApp (todo)</button>
+                <button class="btn-dashboard btn-descargar-tabla" id="btnDescargarTabla2">📥 Descargar Excel de la tabla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Pestaña 3: Cierre sin respuesta -->
+    <div id="tab3" class="tab-content" style="display: none;">
+        <div class="zona-carga">
+            <label for="archivos3" class="boton-carga" id="botonCarga3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                Seleccionar archivos CSV
+            </label>
+            <input type="file" id="archivos3" multiple accept=".csv">
+            <div class="estado-carga" id="estadoCarga3">Cargue archivos para analizar cierres.</div>
+            <div class="barra-progreso" id="barraProgreso3">
+                <div class="progreso" id="progreso3"></div>
+            </div>
+        </div>
+
+        <div class="filtro-skill">
+            <label for="filtroSkill3"><strong>Filtrar por Skill:</strong></label>
+            <select id="filtroSkill3" multiple size="3"></select>
+        </div>
+
+        <div id="resumenCierre"></div>
+
+        <div class="tabla-contenedor">
+            <table id="tabla3">
+                <thead>
+                    <tr>
+                        <th data-col="0">Asignado <span class="indicador"></span></th>
+                        <th data-col="1">Móvil <span class="indicador"></span></th>
+                        <th data-col="2">Asesor <span class="indicador"></span></th>
+                        <th data-col="3">Supervisor <span class="indicador"></span></th>
+                        <th data-col="4">Skill <span class="indicador"></span></th>
+                        <th data-col="5">Fecha Cierre <span class="indicador"></span></th>
+                        <th data-col="6">Tiempo (Min) <span class="indicador"></span></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="mensajeCierre" class="mensaje-vacio" style="display: none;">Cargar archivo</div>
+    </div>
+</div>
+
+<script>
+    // Registro del plugin de etiquetas
+    Chart.register(ChartDataLabels);
+
+    // Variables globales
+    let datosSupervisores = [];
+    let supervisoresCargados = false;
+    let procesando1 = false;
+    let procesando2 = false;
+    let procesando3 = false;
+    let datosChatCargados = false;
+    let datosCierreCargados = false;
+    let resultadosTabla1 = [];
+    let resultadosTabla2 = [];
+    let resultadosTabla3 = [];
+    let skillsDisponibles = new Set();
+
+    // Estado de ordenación por tabla: inicial descendente por columna 6 (tiempo)
+    let sortState = {
+        tabla1: { col: 6, dir: 'desc' },
+        tabla2: { col: 6, dir: 'desc' },
+        tabla3: { col: 6, dir: 'desc' }
+    };
+
+    // Referencias a gráficos
+    let chart1, chart2, chart3;
+    let chart1Chat, chart2Chat, chart3Chat;
+    // Datos actuales para exportar y texto WhatsApp
+    let datosGrafico1 = [], datosGrafico2 = [], datosGrafico3 = [];
+    let datosGrafico1Chat = [], datosGrafico2Chat = [], datosGrafico3Chat = [];
+    // Tabla filtrada actual
+    let currentFilteredTable1 = [];
+    let currentFilteredTable2 = [];
+
+    // Cargar Excel de supervisores
+    async function cargarSupervisores() {
+        const url = "https://raw.githubusercontent.com/teamdigitalrrss-jpg/tNPS-diario/main/Licencias.xlsx";
+        const estado = document.getElementById("estadoCarga1");
+        try {
+            estado.innerHTML = '<span class="spinner"></span> Cargando datos de supervisores...';
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("No se pudo descargar el archivo Excel");
+            const arrayBuffer = await response.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
+            datosSupervisores = XLSX.utils.sheet_to_json(primeraHoja, { defval: "" });
+            supervisoresCargados = true;
+            estado.textContent = `Datos de supervisores cargados (${datosSupervisores.length} registros).`;
+            poblarFiltrosSkill();
+        } catch (error) {
+            estado.textContent = "Error al cargar datos de supervisores: " + error.message;
+            console.error(error);
+        }
+    }
+    cargarSupervisores();
+
+    function poblarFiltrosSkill() {
+        for (let fila of datosSupervisores) {
+            const area = obtenerValor(fila, "Area");
+            if (area && area.trim() !== "") {
+                skillsDisponibles.add(area.trim());
+            }
+        }
+        skillsDisponibles.add("SAC");
+
+        for (let filtroId of ["filtroSkill1", "filtroSkill2", "filtroSkill3"]) {
+            const select = document.getElementById(filtroId);
+            select.innerHTML = "";
+            for (let skill of Array.from(skillsDisponibles).sort()) {
+                const option = document.createElement("option");
+                option.value = skill;
+                option.textContent = skill;
+                if (skill === "SAC") option.selected = true;
+                select.appendChild(option);
+            }
+        }
+
+        document.getElementById("filtroSkill1").addEventListener("change", filtrarTabla1);
+        document.getElementById("filtroSkill2").addEventListener("change", filtrarTabla2);
+        document.getElementById("filtroSkill3").addEventListener("change", filtrarTabla3);
+    }
+
+    function obtenerSkill(asesor) {
+        const asesorNormalizado = asesor.trim().toLowerCase();
+        for (let fila of datosSupervisores) {
+            const claves = Object.keys(fila);
+            for (let clave of claves) {
+                const valor = fila[clave].toString().trim().toLowerCase();
+                if (valor === asesorNormalizado) {
+                    for (let k of claves) {
+                        const kLower = k.toLowerCase();
+                        if (kLower === 'area' || kLower === 'área') {
+                            return fila[k].toString().trim() || 'Sin skill';
+                        }
+                    }
+                    for (let k of claves) {
+                        const kLower = k.toLowerCase();
+                        if (kLower.includes('skill') || kLower.includes('área')) {
+                            return fila[k].toString().trim() || 'Sin skill';
+                        }
+                    }
+                    for (let k of claves) {
+                        const valorCelda = fila[k].toString().trim();
+                        if (valorCelda && valorCelda.toLowerCase() !== asesorNormalizado) {
+                            return valorCelda;
+                        }
+                    }
+                    return 'Sin skill';
+                }
+            }
+        }
+        return 'No encontrado';
+    }
+
+    // ------------------- Manejo de pestañas -------------------
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            const tabId = this.getAttribute('data-tab');
+            document.getElementById(tabId).style.display = 'block';
+
+            if (tabId === 'tab2' && !datosChatCargados) {
+                document.getElementById("mensajeChat").style.display = "block";
+                document.querySelector("#tabla2 tbody").innerHTML = "";
+                document.getElementById("resumenChat").innerHTML = "";
+            }
+            if (tabId === 'tab3' && !datosCierreCargados) {
+                document.getElementById("mensajeCierre").style.display = "block";
+                document.querySelector("#tabla3 tbody").innerHTML = "";
+                document.getElementById("resumenCierre").innerHTML = "";
+            }
+        });
+    });
+
+    // ------------------- Funciones comunes -------------------
+    function obtenerValor(obj, nombre) {
+        let clave = Object.keys(obj).find(
+            k => k.trim().toLowerCase() === nombre.toLowerCase()
+        );
+        return clave ? obj[clave] : "";
+    }
+
+    function obtenerSupervisor(asesor) {
+        const asesorNormalizado = asesor.trim().toLowerCase();
+        for (let fila of datosSupervisores) {
+            const claves = Object.keys(fila);
+            for (let clave of claves) {
+                const valor = fila[clave].toString().trim().toLowerCase();
+                if (valor === asesorNormalizado) {
+                    for (let k of claves) {
+                        const kLower = k.toLowerCase();
+                        if (kLower.includes('supervisor') || kLower.includes('jefe') || kLower.includes('manager')) {
+                            return fila[k].toString().trim() || 'Sin asignar';
+                        }
+                    }
+                    for (let k of claves) {
+                        const valorCelda = fila[k].toString().trim();
+                        if (valorCelda && valorCelda.toLowerCase() !== asesorNormalizado) {
+                            return valorCelda;
+                        }
+                    }
+                    return 'Sin asignar';
+                }
+            }
+        }
+        return 'No encontrado';
+    }
+
+    function convertirFecha(fechaTexto) {
+        if (!fechaTexto) return null;
+        fechaTexto = String(fechaTexto).trim();
+        if (!fechaTexto) return null;
+
+        let fecha = new Date(fechaTexto);
+        if (!isNaN(fecha.getTime())) return fecha;
+
+        const partes = fechaTexto.split(' ');
+        if (partes.length >= 2) {
+            const fechaParte = partes[0].split('/');
+            const horaParte = partes[1].split(':');
+            if (fechaParte.length === 3 && horaParte.length >= 2) {
+                const dia = parseInt(fechaParte[0]);
+                const mes = parseInt(fechaParte[1]) - 1;
+                const anio = parseInt(fechaParte[2]);
+                const hh = parseInt(horaParte[0]);
+                const mm = parseInt(horaParte[1]);
+                if (!isNaN(dia) && !isNaN(mes) && !isNaN(anio) && !isNaN(hh) && !isNaN(mm)) {
+                    return new Date(anio, mes, dia, hh, mm);
+                }
+            }
+        }
+        return null;
+    }
+
+    // Función para aplicar filtro de skill y ordenación
+    function aplicarFiltroYOrden(tablaId, resultados, filtroSkillId) {
+        const filtroSkill = document.getElementById(filtroSkillId);
+        const skillsSeleccionados = Array.from(filtroSkill.selectedOptions).map(opt => opt.value);
+
+        let filtrados = resultados.filter(r => skillsSeleccionados.includes(r.skill));
+
+        const state = sortState[tablaId];
+        if (state.col !== null) {
+            filtrados.sort((a, b) => {
+                let valA, valB;
+                switch(state.col) {
+                    case 0: valA = a.fechaAsignacion || a.horaCliente || a.fechaAsignacion; valB = b.fechaAsignacion || b.horaCliente || b.fechaAsignacion; break;
+                    case 1: valA = a.movil; valB = b.movil; break;
+                    case 2: valA = a.asesor; valB = b.asesor; break;
+                    case 3: valA = a.supervisor; valB = b.supervisor; break;
+                    case 4: valA = a.skill; valB = b.skill; break;
+                    case 5: valA = a.fechaRespuesta || a.fechaAsesor || a.fechaCierre; valB = b.fechaRespuesta || b.fechaAsesor || b.fechaCierre; break;
+                    case 6: valA = a.minutos; valB = b.minutos; break;
+                    default: valA = ''; valB = '';
+                }
+
+                if (state.col === 6) {
+                    valA = Number(valA) || 0;
+                    valB = Number(valB) || 0;
+                } else if (state.col === 0 || state.col === 5) {
+                    valA = convertirFecha(valA) || new Date(0);
+                    valB = convertirFecha(valB) || new Date(0);
+                } else {
+                    valA = String(valA).toLowerCase();
+                    valB = String(valB).toLowerCase();
+                }
+
+                if (state.dir === 'asc') {
+                    return valA > valB ? 1 : valA < valB ? -1 : 0;
+                } else {
+                    return valA < valB ? 1 : valA > valB ? -1 : 0;
+                }
+            });
+        }
+
+        return filtrados;
+    }
+
+    function actualizarIndicadores(tablaId) {
+        const tabla = document.getElementById(tablaId);
+        const ths = tabla.querySelectorAll('th');
+        const state = sortState[tablaId];
+        ths.forEach(th => {
+            const col = parseInt(th.getAttribute('data-col'));
+            const indicador = th.querySelector('.indicador');
+            if (indicador) {
+                if (state.col === col) {
+                    indicador.textContent = state.dir === 'asc' ? '▲' : '▼';
+                } else {
+                    indicador.textContent = '';
+                }
+            }
+        });
+    }
+
+    // ------------------- Funciones para gráficos (tabla 1) -------------------
+    function actualizarGraficosTabla1(resultadosFiltrados) {
+        if (chart1) chart1.destroy();
+        if (chart2) chart2.destroy();
+        if (chart3) chart3.destroy();
+
+        // 1. TOP 5 agentes con más apariciones
+        const freq = {};
+        resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
+        const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico1 = freqArray.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+        const labels1 = freqArray.map(item => item[0]);
+        const data1 = freqArray.map(item => item[1]);
+
+        // 2. TOP 5 agentes con más suma de minutos
+        const suma = {};
+        resultadosFiltrados.forEach(r => suma[r.asesor] = (suma[r.asesor] || 0) + r.minutos);
+        const sumaArray = Object.entries(suma).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico2 = sumaArray.map(([asesor, total]) => ({ Agente: asesor, TotalMinutos: total }));
+        const labels2 = sumaArray.map(item => item[0]);
+        const data2 = sumaArray.map(item => item[1]);
+
+        // 3. TOP 5 agentes con tiempos altos (independiente del orden de tabla)
+        const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
+        datosGrafico3 = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
+        const labels3 = topTiempo.map(r => r.asesor);
+        const data3 = topTiempo.map(r => r.minutos);
+
+        const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
+
+        chart1 = new Chart(document.getElementById('grafico1'), {
+            type: 'bar',
+            data: { labels: labels1, datasets: [{ label: 'Número de casos', data: data1, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más casos' } } }
+        });
+        chart2 = new Chart(document.getElementById('grafico2'), {
+            type: 'bar',
+            data: { labels: labels2, datasets: [{ label: 'Minutos acumulados', data: data2, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes por suma de minutos' } } }
+        });
+        chart3 = new Chart(document.getElementById('grafico3'), {
+            type: 'bar',
+            data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } }
+        });
+    }
+
+    // ------------------- Funciones para gráficos (tabla 2) -------------------
+    function actualizarGraficosTabla2(resultadosFiltrados) {
+        if (chart1Chat) chart1Chat.destroy();
+        if (chart2Chat) chart2Chat.destroy();
+        if (chart3Chat) chart3Chat.destroy();
+
+        // 1. TOP 5 agentes con más apariciones
+        const freq = {};
+        resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
+        const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico1Chat = freqArray.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+        const labels1 = freqArray.map(item => item[0]);
+        const data1 = freqArray.map(item => item[1]);
+
+        // 2. TOP 5 agentes con más suma de minutos
+        const suma = {};
+        resultadosFiltrados.forEach(r => suma[r.asesor] = (suma[r.asesor] || 0) + r.minutos);
+        const sumaArray = Object.entries(suma).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico2Chat = sumaArray.map(([asesor, total]) => ({ Agente: asesor, TotalMinutos: total }));
+        const labels2 = sumaArray.map(item => item[0]);
+        const data2 = sumaArray.map(item => item[1]);
+
+        // 3. TOP 5 agentes con tiempos altos (independiente del orden)
+        const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
+        datosGrafico3Chat = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
+        const labels3 = topTiempo.map(r => r.asesor);
+        const data3 = topTiempo.map(r => r.minutos);
+
+        const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
+
+        chart1Chat = new Chart(document.getElementById('grafico1Chat'), {
+            type: 'bar',
+            data: { labels: labels1, datasets: [{ label: 'Número de casos', data: data1, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más casos' } } }
+        });
+        chart2Chat = new Chart(document.getElementById('grafico2Chat'), {
+            type: 'bar',
+            data: { labels: labels2, datasets: [{ label: 'Minutos acumulados', data: data2, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes por suma de minutos' } } }
+        });
+        chart3Chat = new Chart(document.getElementById('grafico3Chat'), {
+            type: 'bar',
+            data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: '#EBD59B' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } }
+        });
+    }
+
+    // Función para copiar texto combinado de WhatsApp (recibe datos de los tres gráficos)
+    function copiarTextoCombinado(datos1, datos2, datos3, tituloGeneral) {
+        const secciones = [];
+        if (datos1.length > 0) secciones.push("📊 Top 5 agentes con más casos:\n" + datos1.map(d => `${d.Agente} = ${d.Veces} casos`).join('\n'));
+        if (datos2.length > 0) secciones.push("📊 Top 5 agentes por suma de minutos:\n" + datos2.map(d => `${d.Agente} = ${d.TotalMinutos} minutos`).join('\n'));
+        if (datos3.length > 0) secciones.push("📊 Top 5 agentes con mayores tiempos:\n" + datos3.map(d => `${d.Agente} = ${d.TiempoMin} minutos`).join('\n'));
+        if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
+        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\nQuedamos atentos al seguimiento.";
+        navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
+    }
+
+    // Botones dashboard tabla 1
+    document.getElementById('btnCopiarTexto1').addEventListener('click', () => copiarTextoCombinado(datosGrafico1, datosGrafico2, datosGrafico3, "Compartimos detalle de tiempos altos en primeras respuestas:"));
+    document.getElementById('btnDescargarTabla1').addEventListener('click', () => descargarExcel(currentFilteredTable1, 'tabla_primera_respuesta.xlsx'));
+
+    // Botones dashboard tabla 2
+    document.getElementById('btnCopiarTexto2').addEventListener('click', () => copiarTextoCombinado(datosGrafico1Chat, datosGrafico2Chat, datosGrafico3Chat, "Compartimos detalle de tiempos altos en chat:"));
+    document.getElementById('btnDescargarTabla2').addEventListener('click', () => descargarExcel(currentFilteredTable2, 'tabla_chat.xlsx'));
+
+    function descargarExcel(datos, nombreArchivo) {
+        if (!datos || datos.length === 0) { alert('No hay datos para exportar'); return; }
+        const ws = XLSX.utils.json_to_sheet(datos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Tabla');
+        XLSX.writeFile(wb, nombreArchivo);
+    }
+
+    // ------------------- Pestaña 1 -------------------
+    document.getElementById('archivos1').addEventListener('change', function(e) { if (this.files.length > 0) procesarArchivosPrimeraRespuesta(this.files); });
+
+    async function procesarArchivosPrimeraRespuesta(archivos) {
+        if (archivos.length === 0 || procesando1) return;
+        if (!supervisoresCargados) { alert("Los datos de supervisores aún no se han cargado. Espere un momento."); return; }
+        procesando1 = true;
+        const barra = document.getElementById('barraProgreso1');
+        const progreso = document.getElementById('progreso1');
+        const estadoCarga = document.getElementById('estadoCarga1');
+        barra.style.display = 'block';
+        progreso.style.width = '0%';
+        estadoCarga.innerHTML = '<span class="spinner"></span> Procesando archivos...';
+        try {
+            let registros = [];
+            const MAX_FILAS = 500000;
+            for (let i = 0; i < archivos.length; i++) {
+                const archivo = archivos[i];
+                const texto = await archivo.text();
+                let resultado;
+                try { resultado = Papa.parse(texto, { header: true, skipEmptyLines: true, delimitersToGuess: [",", ";", "\t", "|"] }); }
+                catch (parseError) { throw new Error(`Error al parsear ${archivo.name}: ${parseError.message}`); }
+                if (resultado.data.length > MAX_FILAS) throw new Error(`El archivo ${archivo.name} tiene demasiadas filas (${resultado.data.length}). Máximo permitido: ${MAX_FILAS}.`);
+                registros = registros.concat(resultado.data);
+                progreso.style.width = `${Math.round(((i + 1) / archivos.length) * 100)}%`;
+            }
+            await new Promise(resolve => setTimeout(resolve, 300));
+            analizarDatosPrimeraRespuesta(registros);
+            estadoCarga.textContent = `Procesamiento completado. Archivos cargados: ${archivos.length}`;
+        } catch (error) { estadoCarga.textContent = "Error al procesar archivos: " + error.message; console.error(error); }
+        finally { procesando1 = false; setTimeout(() => { barra.style.display = 'none'; progreso.style.width = '0%'; }, 1500); }
+    }
+
+    function analizarDatosPrimeraRespuesta(datos) {
+        datos.forEach(fila => { fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")); });
+        datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
+        resultadosTabla1 = [];
+        for (let i = 0; i < datos.length; i++) {
+            const fila = datos[i];
+            const agente = obtenerValor(fila, "Agente").trim();
+            const movil = obtenerValor(fila, "Movil").trim();
+            const texto = obtenerValor(fila, "Texto");
+            if (movil.includes("@")) continue;
+            if (agente.toLowerCase() !== "system") continue;
+            if (!texto.toLowerCase().includes("caso recibido por")) continue;
+            const fechaAsignacion = fila._fechaParseada;
+            if (!fechaAsignacion) continue;
+            let conversacionValida = true;
+            let primeraRespuesta = null;
+            let asesor = "";
+            let fechaRespuestaTexto = "";
+            for (let j = i + 1; j < datos.length; j++) {
+                const siguiente = datos[j];
+                const movil2 = obtenerValor(siguiente, "Movil").trim();
+                if (movil2 !== movil) continue;
+                if (movil2.includes("@")) continue;
+                const agente2 = obtenerValor(siguiente, "Agente").trim();
+                const agente2Lower = agente2.toLowerCase();
+                if (agente2Lower === "na" || agente2Lower === "system") { conversacionValida = false; break; }
+                const remoto2 = obtenerValor(siguiente, "Remoto").trim();
+                if (agente2Lower === "admin@clarosv") continue;
+                if (agente2Lower.includes("@clarosv") && remoto2 === "0") {
+                    primeraRespuesta = siguiente._fechaParseada;
+                    asesor = agente2;
+                    fechaRespuestaTexto = obtenerValor(siguiente, "Fecha");
+                    break;
+                }
+            }
+            if (!conversacionValida) continue;
+            if (primeraRespuesta) {
+                const minutos = Math.round((primeraRespuesta - fechaAsignacion) / 60000);
+                if (minutos > 10) {
+                    const supervisor = obtenerSupervisor(asesor);
+                    const skill = obtenerSkill(asesor);
+                    resultadosTabla1.push({ fechaAsignacion: obtenerValor(fila, "Fecha"), movil, asesor, supervisor, skill, fechaRespuesta: fechaRespuestaTexto, minutos });
+                }
+            }
+        }
+        filtrarTabla1();
+    }
+
+    function filtrarTabla1() {
+        const filtrados = aplicarFiltroYOrden('tabla1', resultadosTabla1, "filtroSkill1");
+        currentFilteredTable1 = filtrados;
+        mostrarResultadosPrimeraRespuesta(filtrados);
+        actualizarIndicadores('tabla1');
+        actualizarGraficosTabla1(filtrados);
+    }
+
+    function mostrarResultadosPrimeraRespuesta(resultados) {
+        const tbody = document.querySelector("#tabla1 tbody");
+        tbody.innerHTML = "";
+        resultados.forEach(r => {
+            const fila = document.createElement("tr");
+            fila.innerHTML = `<td>${r.fechaAsignacion}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${r.skill}</td><td>${r.fechaRespuesta}</td><td class="rojo">${r.minutos}</td>`;
+            tbody.appendChild(fila);
+        });
+        document.getElementById("resumen").innerHTML = "✅ Casos encontrados: " + resultados.length;
+    }
+
+    // ------------------- Pestaña 2 (Chat) -------------------
+    document.getElementById('archivos2').addEventListener('change', function(e) { if (this.files.length > 0) procesarArchivosChat(this.files); });
+
+    async function procesarArchivosChat(archivos) {
+        if (archivos.length === 0 || procesando2) return;
+        if (!supervisoresCargados) { alert("Los datos de supervisores aún no se han cargado. Espere un momento."); return; }
+        procesando2 = true;
+        const barra = document.getElementById('barraProgreso2');
+        const progreso = document.getElementById('progreso2');
+        const estadoCarga = document.getElementById('estadoCarga2');
+        barra.style.display = 'block';
+        progreso.style.width = '0%';
+        estadoCarga.innerHTML = '<span class="spinner"></span> Procesando archivos...';
+        try {
+            let registros = [];
+            const MAX_FILAS = 500000;
+            for (let i = 0; i < archivos.length; i++) {
+                const archivo = archivos[i];
+                const texto = await archivo.text();
+                let resultado;
+                try { resultado = Papa.parse(texto, { header: true, skipEmptyLines: true, delimitersToGuess: [",", ";", "\t", "|"] }); }
+                catch (parseError) { throw new Error(`Error al parsear ${archivo.name}: ${parseError.message}`); }
+                if (resultado.data.length > MAX_FILAS) throw new Error(`El archivo ${archivo.name} tiene demasiadas filas (${resultado.data.length}). Máximo permitido: ${MAX_FILAS}.`);
+                registros = registros.concat(resultado.data);
+                progreso.style.width = `${Math.round(((i + 1) / archivos.length) * 100)}%`;
+            }
+            await new Promise(resolve => setTimeout(resolve, 300));
+            analizarDatosChat(registros);
+            datosChatCargados = true;
+            document.getElementById("mensajeChat").style.display = "none";
+            estadoCarga.textContent = `Procesamiento completado. Archivos cargados: ${archivos.length}`;
+        } catch (error) { estadoCarga.textContent = "Error al procesar archivos: " + error.message; console.error(error); }
+        finally { procesando2 = false; setTimeout(() => { barra.style.display = 'none'; progreso.style.width = '0%'; }, 1500); }
+    }
+
+    function analizarDatosChat(datos) {
+        datos.forEach(fila => { fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")); });
+        datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
+        resultadosTabla2 = [];
+        for (let i = 0; i < datos.length; i++) {
+            const fila = datos[i];
+            const remoto = obtenerValor(fila, "Remoto").trim();
+            if (remoto !== "1") continue;
+            const movil = obtenerValor(fila, "Movil").trim();
+            if (movil.includes("@")) continue;
+            const agenteCliente = obtenerValor(fila, "Agente").trim();
+            if (agenteCliente.toLowerCase() === "na" || agenteCliente.toLowerCase() === "system") continue;
+            const fechaCliente = fila._fechaParseada;
+            if (!fechaCliente) continue;
+            let conversacionValida = true;
+            for (let j = i + 1; j < datos.length; j++) {
+                const siguiente = datos[j];
+                const movil2 = obtenerValor(siguiente, "Movil").trim();
+                if (movil2 !== movil) continue;
+                if (movil2.includes("@")) continue;
+                const agenteIntermedio = obtenerValor(siguiente, "Agente").trim().toLowerCase();
+                if (agenteIntermedio === "na" || agenteIntermedio === "system") { conversacionValida = false; break; }
+                const remoto2 = obtenerValor(siguiente, "Remoto").trim();
+                if (remoto2 !== "0") continue;
+                const agenteAsesor = obtenerValor(siguiente, "Agente").trim();
+                if (agenteAsesor.toLowerCase() === "na" || agenteAsesor.toLowerCase() === "system") { conversacionValida = false; break; }
+                const fechaAsesor = siguiente._fechaParseada;
+                if (!fechaAsesor) { conversacionValida = false; break; }
+                const minutos = Math.round((fechaAsesor - fechaCliente) / 60000);
+                if (minutos > 10) {
+                    const supervisor = obtenerSupervisor(agenteAsesor);
+                    const skill = obtenerSkill(agenteAsesor);
+                    resultadosTabla2.push({ horaCliente: obtenerValor(fila, "Fecha"), movil, asesor: agenteAsesor, supervisor, skill, fechaAsesor: obtenerValor(siguiente, "Fecha"), minutos });
+                }
+                break;
+            }
+            if (!conversacionValida) continue;
+        }
+        filtrarTabla2();
+    }
+
+    function filtrarTabla2() {
+        const filtrados = aplicarFiltroYOrden('tabla2', resultadosTabla2, "filtroSkill2");
+        currentFilteredTable2 = filtrados;
+        mostrarResultadosChat(filtrados);
+        actualizarIndicadores('tabla2');
+        actualizarGraficosTabla2(filtrados);
+    }
+
+    function mostrarResultadosChat(resultados) {
+        const tbody = document.querySelector("#tabla2 tbody");
+        tbody.innerHTML = "";
+        resultados.forEach(r => {
+            const fila = document.createElement("tr");
+            fila.innerHTML = `<td>${r.horaCliente}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${r.skill}</td><td>${r.fechaAsesor}</td><td class="rojo">${r.minutos}</td>`;
+            tbody.appendChild(fila);
+        });
+        document.getElementById("resumenChat").innerHTML = "✅ Casos de chat encontrados: " + resultados.length;
+    }
+
+    // ------------------- Pestaña 3: Cierre sin respuesta -------------------
+    document.getElementById('archivos3').addEventListener('change', function(e) { if (this.files.length > 0) procesarArchivosCierre(this.files); });
+
+    async function procesarArchivosCierre(archivos) {
+        if (archivos.length === 0 || procesando3) return;
+        if (!supervisoresCargados) { alert("Los datos de supervisores aún no se han cargado. Espere un momento."); return; }
+        procesando3 = true;
+        const barra = document.getElementById('barraProgreso3');
+        const progreso = document.getElementById('progreso3');
+        const estadoCarga = document.getElementById('estadoCarga3');
+        barra.style.display = 'block';
+        progreso.style.width = '0%';
+        estadoCarga.innerHTML = '<span class="spinner"></span> Procesando archivos...';
+        try {
+            let registros = [];
+            const MAX_FILAS = 500000;
+            for (let i = 0; i < archivos.length; i++) {
+                const archivo = archivos[i];
+                const texto = await archivo.text();
+                let resultado;
+                try { resultado = Papa.parse(texto, { header: true, skipEmptyLines: true, delimitersToGuess: [",", ";", "\t", "|"] }); }
+                catch (parseError) { throw new Error(`Error al parsear ${archivo.name}: ${parseError.message}`); }
+                if (resultado.data.length > MAX_FILAS) throw new Error(`El archivo ${archivo.name} tiene demasiadas filas (${resultado.data.length}). Máximo permitido: ${MAX_FILAS}.`);
+                registros = registros.concat(resultado.data);
+                progreso.style.width = `${Math.round(((i + 1) / archivos.length) * 100)}%`;
+            }
+            await new Promise(resolve => setTimeout(resolve, 300));
+            analizarDatosCierre(registros);
+            datosCierreCargados = true;
+            document.getElementById("mensajeCierre").style.display = "none";
+            estadoCarga.textContent = `Procesamiento completado. Archivos cargados: ${archivos.length}`;
+        } catch (error) { estadoCarga.textContent = "Error al procesar archivos: " + error.message; console.error(error); }
+        finally { procesando3 = false; setTimeout(() => { barra.style.display = 'none'; progreso.style.width = '0%'; }, 1500); }
+    }
+
+    function extraerAgenteCierre(texto) {
+        const emailRegex = /[\w.-]+@[\w.-]+\.\w+/;
+        const match = texto.match(emailRegex);
+        if (match) return match[0];
+        const partes = texto.toLowerCase().split("agente");
+        if (partes.length > 1) {
+            const resto = partes[1].trim();
+            const palabras = resto.split(/\s+/);
+            if (palabras.length > 0 && palabras[0] !== "") return palabras[0];
+        }
+        return "";
+    }
+
+    function analizarDatosCierre(datos) {
+        datos.forEach(fila => { fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")); });
+        datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
+        resultadosTabla3 = [];
+        for (let i = 0; i < datos.length; i++) {
+            const fila = datos[i];
+            const agente = obtenerValor(fila, "Agente").trim();
+            const movil = obtenerValor(fila, "Movil").trim();
+            const texto = obtenerValor(fila, "Texto");
+            if (movil.includes("@")) continue;
+            if (agente.toLowerCase() !== "system") continue;
+            if (!texto.toLowerCase().includes("caso recibido por")) continue;
+            const fechaAsignacion = fila._fechaParseada;
+            if (!fechaAsignacion) continue;
+
+            let hayRespuestaAsesor = false;
+            let agenteCierre = "";
+            let fechaCierre = null;
+            let fechaCierreTexto = "";
+            for (let j = i + 1; j < datos.length; j++) {
+                const siguiente = datos[j];
+                const movil2 = obtenerValor(siguiente, "Movil").trim();
+                if (movil2 !== movil) continue;
+                if (movil2.includes("@")) continue;
+                const agente2 = obtenerValor(siguiente, "Agente").trim();
+                const remoto2 = obtenerValor(siguiente, "Remoto").trim();
+                const texto2 = obtenerValor(siguiente, "Texto");
+                if (agente2.toLowerCase().includes("@clarosv") && remoto2 === "0") { hayRespuestaAsesor = true; break; }
+                if (agente2.toLowerCase() === "system" && texto2.toLowerCase().includes("cierra caso agente")) {
+                    agenteCierre = extraerAgenteCierre(texto2);
+                    fechaCierre = siguiente._fechaParseada;
+                    fechaCierreTexto = obtenerValor(siguiente, "Fecha");
+                    break;
+                }
+            }
+            if (hayRespuestaAsesor) continue;
+            if (!agenteCierre || !fechaCierre) continue;
+            const minutos = Math.round((fechaCierre - fechaAsignacion) / 60000);
+            const supervisor = obtenerSupervisor(agenteCierre);
+            const skill = obtenerSkill(agenteCierre);
+            resultadosTabla3.push({ fechaAsignacion: obtenerValor(fila, "Fecha"), movil, asesor: agenteCierre, supervisor, skill, fechaCierre: fechaCierreTexto, minutos });
+        }
+        filtrarTabla3();
+    }
+
+    function filtrarTabla3() {
+        const filtrados = aplicarFiltroYOrden('tabla3', resultadosTabla3, "filtroSkill3");
+        mostrarResultadosCierre(filtrados);
+        actualizarIndicadores('tabla3');
+    }
+
+    function mostrarResultadosCierre(resultados) {
+        const tbody = document.querySelector("#tabla3 tbody");
+        tbody.innerHTML = "";
+        resultados.forEach(r => {
+            const fila = document.createElement("tr");
+            fila.innerHTML = `<td>${r.fechaAsignacion}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${r.skill}</td><td>${r.fechaCierre}</td><td class="rojo">${r.minutos}</td>`;
+            tbody.appendChild(fila);
+        });
+        document.getElementById("resumenCierre").innerHTML = "✅ Casos de cierre sin respuesta: " + resultados.length;
+    }
+
+    // ------------------- Eventos de ordenación por clic en encabezados -------------------
+    document.querySelectorAll('th[data-col]').forEach(th => {
+        th.addEventListener('click', function() {
+            const tabla = this.closest('table');
+            const tablaId = tabla.id;
+            const col = parseInt(this.getAttribute('data-col'));
+            const state = sortState[tablaId];
+            if (state.col === col) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+            else { state.col = col; state.dir = 'asc'; }
+            if (tablaId === 'tabla1') filtrarTabla1();
+            else if (tablaId === 'tabla2') filtrarTabla2();
+            else if (tablaId === 'tabla3') filtrarTabla3();
+        });
+    });
+
+</script>
+
+</body>
+</html>
