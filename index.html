@@ -157,6 +157,9 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
+        @media (min-width: 700px) {
+            .graficos-grid { grid-template-columns: repeat(2, 1fr); }
+        }
         .grafico-card {
             background: var(--color-blanco);
             border-radius: 12px;
@@ -194,16 +197,12 @@
             background-color: #25D366;
             color: white;
         }
-        .btn-copiar-texto:hover {
-            background-color: #1ebe5b;
-        }
+        .btn-copiar-texto:hover { background-color: #1ebe5b; }
         .btn-descargar-tabla {
             background-color: #6c757d;
             color: white;
         }
-        .btn-descargar-tabla:hover {
-            background-color: #5a6268;
-        }
+        .btn-descargar-tabla:hover { background-color: #5a6268; }
     </style>
 </head>
 <body>
@@ -261,15 +260,10 @@
         <div id="graficosContainer">
             <h3>📊 Estadísticas de Tiempos Altos Primeras respuestas</h3>
             <div class="graficos-grid">
-                <div class="grafico-card">
-                    <canvas id="grafico1"></canvas>
-                </div>
-                <div class="grafico-card">
-                    <canvas id="grafico2"></canvas>
-                </div>
-                <div class="grafico-card">
-                    <canvas id="grafico3"></canvas>
-                </div>
+                <div class="grafico-card"><canvas id="grafico1"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico2"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico3"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico4"></canvas></div>
             </div>
             <div class="dashboard-acciones">
                 <button class="btn-dashboard btn-copiar-texto" id="btnCopiarTexto1">📋 Copiar texto WhatsApp (todo)</button>
@@ -321,15 +315,10 @@
         <div id="graficosContainerChat">
             <h3>📊 Estadísticas de Tiempos Altos en Chat</h3>
             <div class="graficos-grid">
-                <div class="grafico-card">
-                    <canvas id="grafico1Chat"></canvas>
-                </div>
-                <div class="grafico-card">
-                    <canvas id="grafico2Chat"></canvas>
-                </div>
-                <div class="grafico-card">
-                    <canvas id="grafico3Chat"></canvas>
-                </div>
+                <div class="grafico-card"><canvas id="grafico1Chat"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico2Chat"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico3Chat"></canvas></div>
+                <div class="grafico-card"><canvas id="grafico4Chat"></canvas></div>
             </div>
             <div class="dashboard-acciones">
                 <button class="btn-dashboard btn-copiar-texto" id="btnCopiarTexto2">📋 Copiar texto WhatsApp (todo)</button>
@@ -396,19 +385,25 @@
     let resultadosTabla3 = [];
     let skillsDisponibles = new Set();
 
-    // Estado de ordenación por tabla: inicial descendente por columna 6 (tiempo)
+    // Estado de ordenación por tabla
     let sortState = {
         tabla1: { col: 6, dir: 'desc' },
         tabla2: { col: 6, dir: 'desc' },
         tabla3: { col: 6, dir: 'desc' }
     };
 
+    // Filtros activos por clic en gráficos
+    let filtrosActivosTabla1 = { agentes: new Set(), supervisores: new Set() };
+    let filtrosActivosTabla2 = { agentes: new Set(), supervisores: new Set() };
+
     // Referencias a gráficos
-    let chart1, chart2, chart3;
-    let chart1Chat, chart2Chat, chart3Chat;
+    let chart1, chart2, chart3, chart4;
+    let chart1Chat, chart2Chat, chart3Chat, chart4Chat;
+
     // Datos actuales para exportar y texto WhatsApp
-    let datosGrafico1 = [], datosGrafico2 = [], datosGrafico3 = [];
-    let datosGrafico1Chat = [], datosGrafico2Chat = [], datosGrafico3Chat = [];
+    let datosGrafico1 = [], datosGrafico2 = [], datosGrafico3 = [], datosGrafico4 = [];
+    let datosGrafico1Chat = [], datosGrafico2Chat = [], datosGrafico3Chat = [], datosGrafico4Chat = [];
+
     // Tabla filtrada actual
     let currentFilteredTable1 = [];
     let currentFilteredTable2 = [];
@@ -575,12 +570,21 @@
         return null;
     }
 
-    // Función para aplicar filtro de skill y ordenación
-    function aplicarFiltroYOrden(tablaId, resultados, filtroSkillId) {
+    // Función para aplicar filtro de skill, filtros activos y ordenación
+    function aplicarFiltroYOrden(tablaId, resultados, filtroSkillId, filtrosActivos) {
         const filtroSkill = document.getElementById(filtroSkillId);
         const skillsSeleccionados = Array.from(filtroSkill.selectedOptions).map(opt => opt.value);
 
         let filtrados = resultados.filter(r => skillsSeleccionados.includes(r.skill));
+
+        if (filtrosActivos) {
+            if (filtrosActivos.agentes && filtrosActivos.agentes.size > 0) {
+                filtrados = filtrados.filter(r => filtrosActivos.agentes.has(r.asesor));
+            }
+            if (filtrosActivos.supervisores && filtrosActivos.supervisores.size > 0) {
+                filtrados = filtrados.filter(r => filtrosActivos.supervisores.has(r.supervisor));
+            }
+        }
 
         const state = sortState[tablaId];
         if (state.col !== null) {
@@ -637,12 +641,13 @@
     }
 
     // ------------------- Funciones para gráficos (tabla 1) -------------------
-    function actualizarGraficosTabla1(resultadosFiltrados) {
+    function actualizarGraficosTabla1(resultadosFiltrados, filtrosActivos) {
         if (chart1) chart1.destroy();
         if (chart2) chart2.destroy();
         if (chart3) chart3.destroy();
+        if (chart4) chart4.destroy();
 
-        // 1. TOP 5 agentes con más apariciones
+        // 1. TOP 5 agentes con más respuestas
         const freq = {};
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
         const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
@@ -650,7 +655,7 @@
         const labels1 = freqArray.map(item => item[0]);
         const data1 = freqArray.map(item => item[1]);
 
-        // 2. TOP 5 agentes con más suma de minutos
+        // 2. TOP 5 agentes por suma de minutos
         const suma = {};
         resultadosFiltrados.forEach(r => suma[r.asesor] = (suma[r.asesor] || 0) + r.minutos);
         const sumaArray = Object.entries(suma).sort((a,b) => b[1] - a[1]).slice(0,5);
@@ -658,38 +663,166 @@
         const labels2 = sumaArray.map(item => item[0]);
         const data2 = sumaArray.map(item => item[1]);
 
-        // 3. TOP 5 agentes con tiempos altos (independiente del orden de tabla)
+        // 3. TOP 5 agentes con tiempos altos
         const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
         datosGrafico3 = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
         const labels3 = topTiempo.map(r => r.asesor);
         const data3 = topTiempo.map(r => r.minutos);
 
+        // 4. TOP 5 supervisores con más casos
+        const freqSup = {};
+        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
+        const supArray = Object.entries(freqSup).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico4 = supArray.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
+        const labels4 = supArray.map(item => item[0]);
+        const data4 = supArray.map(item => item[1]);
+
         const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
+
+        function getBarColor(tipo, label, defaultColor, selectedColor) {
+            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return selectedColor;
+            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor;
+            return defaultColor;
+        }
+
+        const defaultColor = '#EBD59B';
+        const selectedColor = '#FFA500';
 
         chart1 = new Chart(document.getElementById('grafico1'), {
             type: 'bar',
-            data: { labels: labels1, datasets: [{ label: 'Número de casos', data: data1, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más casos' } } }
+            data: {
+                labels: labels1,
+                datasets: [{
+                    label: 'Número de respuestas',
+                    data: data1,
+                    backgroundColor: labels1.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart1.data.labels[index];
+                        toggleFiltroTabla1('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes con más respuestas' }
+                }
+            }
         });
+
         chart2 = new Chart(document.getElementById('grafico2'), {
             type: 'bar',
-            data: { labels: labels2, datasets: [{ label: 'Minutos acumulados', data: data2, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes por suma de minutos' } } }
+            data: {
+                labels: labels2,
+                datasets: [{
+                    label: 'Minutos acumulados',
+                    data: data2,
+                    backgroundColor: labels2.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart2.data.labels[index];
+                        toggleFiltroTabla1('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes por suma de minutos' }
+                }
+            }
         });
+
         chart3 = new Chart(document.getElementById('grafico3'), {
             type: 'bar',
-            data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } }
+            data: {
+                labels: labels3,
+                datasets: [{
+                    label: 'Tiempo (min)',
+                    data: data3,
+                    backgroundColor: labels3.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart3.data.labels[index];
+                        toggleFiltroTabla1('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes con tiempos altos' }
+                }
+            }
+        });
+
+        chart4 = new Chart(document.getElementById('grafico4'), {
+            type: 'bar',
+            data: {
+                labels: labels4,
+                datasets: [{
+                    label: 'Número de respuestas',
+                    data: data4,
+                    backgroundColor: labels4.map(l => getBarColor('supervisor', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart4.data.labels[index];
+                        toggleFiltroTabla1('supervisores', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 supervisores con más casos' }
+                }
+            }
         });
     }
 
+    function toggleFiltroTabla1(tipo, valor) {
+        const set = filtrosActivosTabla1[tipo];
+        if (set.has(valor)) {
+            set.delete(valor);
+        } else {
+            set.add(valor);
+        }
+        filtrarTabla1();
+    }
+
     // ------------------- Funciones para gráficos (tabla 2) -------------------
-    function actualizarGraficosTabla2(resultadosFiltrados) {
+    function actualizarGraficosTabla2(resultadosFiltrados, filtrosActivos) {
         if (chart1Chat) chart1Chat.destroy();
         if (chart2Chat) chart2Chat.destroy();
         if (chart3Chat) chart3Chat.destroy();
+        if (chart4Chat) chart4Chat.destroy();
 
-        // 1. TOP 5 agentes con más apariciones
+        // 1. TOP 5 agentes con más respuestas
         const freq = {};
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
         const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
@@ -697,7 +830,7 @@
         const labels1 = freqArray.map(item => item[0]);
         const data1 = freqArray.map(item => item[1]);
 
-        // 2. TOP 5 agentes con más suma de minutos
+        // 2. TOP 5 agentes por suma de minutos
         const suma = {};
         resultadosFiltrados.forEach(r => suma[r.asesor] = (suma[r.asesor] || 0) + r.minutos);
         const sumaArray = Object.entries(suma).sort((a,b) => b[1] - a[1]).slice(0,5);
@@ -705,48 +838,192 @@
         const labels2 = sumaArray.map(item => item[0]);
         const data2 = sumaArray.map(item => item[1]);
 
-        // 3. TOP 5 agentes con tiempos altos (independiente del orden)
+        // 3. TOP 5 agentes con tiempos altos
         const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
         datosGrafico3Chat = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
         const labels3 = topTiempo.map(r => r.asesor);
         const data3 = topTiempo.map(r => r.minutos);
 
+        // 4. TOP 5 supervisores con más casos
+        const freqSup = {};
+        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
+        const supArray = Object.entries(freqSup).sort((a,b) => b[1] - a[1]).slice(0,5);
+        datosGrafico4Chat = supArray.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
+        const labels4 = supArray.map(item => item[0]);
+        const data4 = supArray.map(item => item[1]);
+
         const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
+
+        function getBarColor(tipo, label, defaultColor, selectedColor) {
+            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return selectedColor;
+            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor;
+            return defaultColor;
+        }
+
+        const defaultColor = '#EBD59B';
+        const selectedColor = '#FFA500';
 
         chart1Chat = new Chart(document.getElementById('grafico1Chat'), {
             type: 'bar',
-            data: { labels: labels1, datasets: [{ label: 'Número de casos', data: data1, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más casos' } } }
+            data: {
+                labels: labels1,
+                datasets: [{
+                    label: 'Número de respuestas',
+                    data: data1,
+                    backgroundColor: labels1.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart1Chat.data.labels[index];
+                        toggleFiltroTabla2('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes con más respuestas' }
+                }
+            }
         });
+
         chart2Chat = new Chart(document.getElementById('grafico2Chat'), {
             type: 'bar',
-            data: { labels: labels2, datasets: [{ label: 'Minutos acumulados', data: data2, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes por suma de minutos' } } }
+            data: {
+                labels: labels2,
+                datasets: [{
+                    label: 'Minutos acumulados',
+                    data: data2,
+                    backgroundColor: labels2.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart2Chat.data.labels[index];
+                        toggleFiltroTabla2('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes por suma de minutos' }
+                }
+            }
         });
+
         chart3Chat = new Chart(document.getElementById('grafico3Chat'), {
             type: 'bar',
-            data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: '#EBD59B' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } }
+            data: {
+                labels: labels3,
+                datasets: [{
+                    label: 'Tiempo (min)',
+                    data: data3,
+                    backgroundColor: labels3.map(l => getBarColor('agente', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart3Chat.data.labels[index];
+                        toggleFiltroTabla2('agentes', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 agentes con tiempos altos' }
+                }
+            }
+        });
+
+        chart4Chat = new Chart(document.getElementById('grafico4Chat'), {
+            type: 'bar',
+            data: {
+                labels: labels4,
+                datasets: [{
+                    label: 'Número de respuestas',
+                    data: data4,
+                    backgroundColor: labels4.map(l => getBarColor('supervisor', l, defaultColor, selectedColor)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length) {
+                        const index = elements[0].index;
+                        const label = chart4Chat.data.labels[index];
+                        toggleFiltroTabla2('supervisores', label);
+                    }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    title: { display: true, text: 'Top 5 supervisores con más casos' }
+                }
+            }
         });
     }
 
-    // Función para copiar texto combinado de WhatsApp (recibe datos de los tres gráficos)
-    function copiarTextoCombinado(datos1, datos2, datos3, tituloGeneral) {
+    function toggleFiltroTabla2(tipo, valor) {
+        const set = filtrosActivosTabla2[tipo];
+        if (set.has(valor)) {
+            set.delete(valor);
+        } else {
+            set.add(valor);
+        }
+        filtrarTabla2();
+    }
+
+    // Función para copiar texto combinado de WhatsApp (Top 2)
+    function copiarTextoCombinado(datos1, datos2, datos3, tituloGeneral, datos4) {
         const secciones = [];
-        if (datos1.length > 0) secciones.push("📊 Top 5 agentes con más casos:\n" + datos1.map(d => `${d.Agente} = ${d.Veces} casos`).join('\n'));
-        if (datos2.length > 0) secciones.push("📊 Top 5 agentes por suma de minutos:\n" + datos2.map(d => `${d.Agente} = ${d.TotalMinutos} minutos`).join('\n'));
-        if (datos3.length > 0) secciones.push("📊 Top 5 agentes con mayores tiempos:\n" + datos3.map(d => `${d.Agente} = ${d.TiempoMin} minutos`).join('\n'));
+        if (datos1 && datos1.length > 0) {
+            const top2 = datos1.slice(0,2);
+            const lineas = top2.map(d => ` • ${d.Agente}: ${d.Veces} respuestas`);
+            secciones.push("📊 Top 2 agentes con más respuestas" + lineas.join('\n'));
+        }
+        if (datos2 && datos2.length > 0) {
+            const top2 = datos2.slice(0,2);
+            const lineas = top2.map(d => ` • ${d.Agente}: ${d.TotalMinutos} min`);
+            secciones.push("📊 Top 2 agentes por suma de minutos" + lineas.join('\n'));
+        }
+        if (datos3 && datos3.length > 0) {
+            const top2 = datos3.slice(0,2);
+            const lineas = top2.map(d => ` • ${d.Agente}: ${d.TiempoMin} min`);
+            secciones.push("📊 Top 2 mayores tiempos registrados" + lineas.join('\n'));
+        }
+        if (datos4 && datos4.length > 0) {
+            const top2 = datos4.slice(0,2);
+            const lineas = top2.map(d => ` • ${d.Supervisor}: ${d.Veces} respuestas`);
+            secciones.push("📊 Top 2 supervisores con más casos" + lineas.join('\n'));
+        }
         if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
-        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\nQuedamos atentos al seguimiento.";
+        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\n✅ Quedamos atentos al seguimiento y las acciones correspondientes.";
         navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
     }
 
     // Botones dashboard tabla 1
-    document.getElementById('btnCopiarTexto1').addEventListener('click', () => copiarTextoCombinado(datosGrafico1, datosGrafico2, datosGrafico3, "Compartimos detalle de tiempos altos en primeras respuestas:"));
+    document.getElementById('btnCopiarTexto1').addEventListener('click', () => copiarTextoCombinado(datosGrafico1, datosGrafico2, datosGrafico3, "📢 Compartimos el detalle de los tiempos elevados en primeras respuestas:", datosGrafico4));
     document.getElementById('btnDescargarTabla1').addEventListener('click', () => descargarExcel(currentFilteredTable1, 'tabla_primera_respuesta.xlsx'));
 
     // Botones dashboard tabla 2
-    document.getElementById('btnCopiarTexto2').addEventListener('click', () => copiarTextoCombinado(datosGrafico1Chat, datosGrafico2Chat, datosGrafico3Chat, "Compartimos detalle de tiempos altos en chat:"));
+    document.getElementById('btnCopiarTexto2').addEventListener('click', () => copiarTextoCombinado(datosGrafico1Chat, datosGrafico2Chat, datosGrafico3Chat, "📢 Compartimos el detalle de los tiempos elevados en chat:", datosGrafico4Chat));
     document.getElementById('btnDescargarTabla2').addEventListener('click', () => descargarExcel(currentFilteredTable2, 'tabla_chat.xlsx'));
 
     function descargarExcel(datos, nombreArchivo) {
@@ -839,11 +1116,11 @@
     }
 
     function filtrarTabla1() {
-        const filtrados = aplicarFiltroYOrden('tabla1', resultadosTabla1, "filtroSkill1");
+        const filtrados = aplicarFiltroYOrden('tabla1', resultadosTabla1, "filtroSkill1", filtrosActivosTabla1);
         currentFilteredTable1 = filtrados;
         mostrarResultadosPrimeraRespuesta(filtrados);
         actualizarIndicadores('tabla1');
-        actualizarGraficosTabla1(filtrados);
+        actualizarGraficosTabla1(filtrados, filtrosActivosTabla1);
     }
 
     function mostrarResultadosPrimeraRespuesta(resultados) {
@@ -934,11 +1211,11 @@
     }
 
     function filtrarTabla2() {
-        const filtrados = aplicarFiltroYOrden('tabla2', resultadosTabla2, "filtroSkill2");
+        const filtrados = aplicarFiltroYOrden('tabla2', resultadosTabla2, "filtroSkill2", filtrosActivosTabla2);
         currentFilteredTable2 = filtrados;
         mostrarResultadosChat(filtrados);
         actualizarIndicadores('tabla2');
-        actualizarGraficosTabla2(filtrados);
+        actualizarGraficosTabla2(filtrados, filtrosActivosTabla2);
     }
 
     function mostrarResultadosChat(resultados) {
