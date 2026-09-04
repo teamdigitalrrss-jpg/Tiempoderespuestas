@@ -14,212 +14,65 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
     <style>
-        :root {
-            --color-primario: #EBD59B;
-            --color-primario-oscuro: #c9b57a;
-            --color-texto: #333;
-            --color-fondo: #f9f5eb;
-            --color-blanco: #fff;
-            --color-borde: #ddd;
-            --color-rojo: #e74c3c;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--color-fondo);
-            color: var(--color-texto);
-            padding: 30px 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-        }
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            background: var(--color-blanco);
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 30px;
-        }
-        h1 {
-            color: var(--color-primario-oscuro);
-            font-size: 2rem;
-            margin-bottom: 10px;
-            border-bottom: 3px solid var(--color-primario);
-            padding-bottom: 10px;
-        }
-        .subtitulo { color: #666; margin-bottom: 25px; }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            border-bottom: 2px solid var(--color-primario);
-            padding-bottom: 10px;
-        }
-        .tab {
-            background: none;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #666;
-            cursor: pointer;
-            border-radius: 8px 8px 0 0;
-            transition: all 0.3s;
-        }
-        .tab:hover { background-color: #f0ead6; }
-        .tab.active {
-            background-color: var(--color-primario);
-            color: #5a4a1f;
-            border-bottom: 2px solid var(--color-primario-oscuro);
-        }
-
-        .zona-carga { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
-        .boton-carga {
-            background-color: var(--color-primario);
-            color: #5a4a1f;
-            border: none;
-            padding: 14px 28px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .boton-carga:hover { background-color: var(--color-primario-oscuro); }
-        .boton-carga svg { width: 20px; height: 20px; fill: currentColor; }
-        input[type="file"] { display: none; }
-        .estado-carga { margin-top: 15px; font-size: 0.9rem; color: #666; min-height: 24px; }
-        .barra-progreso { width: 100%; height: 8px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px; display: none; }
-        .barra-progreso .progreso { height: 100%; width: 0%; background: var(--color-primario-oscuro); border-radius: 10px; transition: width 0.3s ease; }
-        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--color-primario-oscuro); animation: spin 1s linear infinite; margin-right: 8px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .filtro-skill { margin: 15px 0; display: flex; align-items: center; gap: 10px; }
-        .filtro-skill select {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--color-borde);
-            background: var(--color-blanco);
-            min-width: 200px;
-            font-size: 1rem;
-        }
-
-        /* Tablas con scroll y encabezado fijo */
-        .tabla-contenedor {
-            max-height: 350px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-        table { width: 100%; border-collapse: collapse; background: var(--color-blanco); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        th {
-            background: var(--color-primario);
-            color: #5a4a1f;
-            font-weight: 600;
-            padding: 14px 12px;
-            text-align: left;
-            border-bottom: 2px solid var(--color-primario-oscuro);
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            cursor: pointer;
-            user-select: none;
-        }
-        th:hover { background: #e0d2a7; }
-        th .indicador { font-size: 0.8rem; margin-left: 5px; color: #5a4a1f; }
-        td { padding: 12px; border-bottom: 1px solid var(--color-borde); vertical-align: middle; }
-        tr:nth-child(even) { background-color: #fcf9f2; }
-        tr:hover { background-color: #f5efdd; }
-        .rojo { color: var(--color-rojo); font-weight: bold; }
-        #resumen, #resumenChat, #resumenCierre { margin-top: 20px; font-size: 1.1rem; font-weight: 600; background: #f0ead6; padding: 12px 20px; border-radius: 8px; display: inline-block; }
-        .mensaje-vacio { text-align: center; padding: 30px; font-size: 1.2rem; color: #999; }
-
-        /* Dashboard de gráficos */
-        #graficosContainer, #graficosContainerChat {
-            margin-top: 40px;
-            border-top: 2px solid var(--color-primario);
-            padding-top: 20px;
-        }
-        #graficosContainer h3, #graficosContainerChat h3 {
-            color: var(--color-primario-oscuro);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .graficos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        @media (min-width: 700px) {
-            .graficos-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        .grafico-card {
-            background: var(--color-blanco);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            padding: 15px;
-            transition: all 0.3s;
-        }
-        .grafico-card:hover {
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-            transform: translateY(-3px);
-        }
-        .grafico-card canvas {
-            width: 100% !important;
-            height: 280px !important;
-            max-height: 280px;
-        }
-        .dashboard-acciones {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 25px;
-            flex-wrap: wrap;
-        }
-        .btn-dashboard {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .btn-copiar-texto {
-            background-color: #25D366;
-            color: white;
-        }
-        .btn-copiar-texto:hover { background-color: #1ebe5b; }
-        .btn-descargar-tabla {
-            background-color: #6c757d;
-            color: white;
-        }
-        .btn-descargar-tabla:hover { background-color: #5a6268; }
+        :root { --color-primario:#EBD59B; --color-primario-oscuro:#c9b57a; --color-texto:#333; --color-fondo:#f9f5eb; --color-blanco:#fff; --color-borde:#ddd; --color-rojo:#e74c3c; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:var(--color-fondo); color:var(--color-texto); padding:30px 20px; display:flex; justify-content:center; align-items:flex-start; min-height:100vh; }
+        .container { width:100%; max-width:1200px; background:var(--color-blanco); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); padding:30px; }
+        h1 { color:var(--color-primario-oscuro); font-size:2rem; margin-bottom:10px; border-bottom:3px solid var(--color-primario); padding-bottom:10px; }
+        .subtitulo { color:#666; margin-bottom:25px; }
+        .tabs { display:flex; gap:10px; margin-bottom:25px; border-bottom:2px solid var(--color-primario); padding-bottom:10px; }
+        .tab { background:none; border:none; padding:10px 20px; font-size:1rem; font-weight:600; color:#666; cursor:pointer; border-radius:8px 8px 0 0; transition:all 0.3s; }
+        .tab:hover { background-color:#f0ead6; }
+        .tab.active { background-color:var(--color-primario); color:#5a4a1f; border-bottom:2px solid var(--color-primario-oscuro); }
+        .zona-carga { display:flex; flex-direction:column; align-items:center; margin-bottom:25px; }
+        .boton-carga { background-color:var(--color-primario); color:#5a4a1f; border:none; padding:14px 28px; font-size:1.1rem; font-weight:600; border-radius:50px; cursor:pointer; transition:all 0.3s ease; box-shadow:0 4px 8px rgba(0,0,0,0.1); display:inline-flex; align-items:center; gap:8px; }
+        .boton-carga:hover { background-color:var(--color-primario-oscuro); }
+        .boton-carga svg { width:20px; height:20px; fill:currentColor; }
+        input[type="file"] { display:none; }
+        .estado-carga { margin-top:15px; font-size:0.9rem; color:#666; min-height:24px; }
+        .barra-progreso { width:100%; height:8px; background:#e0e0e0; border-radius:10px; overflow:hidden; margin-top:15px; display:none; }
+        .barra-progreso .progreso { height:100%; width:0%; background:var(--color-primario-oscuro); border-radius:10px; transition:width 0.3s ease; }
+        .spinner { display:inline-block; width:20px; height:20px; border:3px solid rgba(0,0,0,0.1); border-radius:50%; border-top-color:var(--color-primario-oscuro); animation:spin 1s linear infinite; margin-right:8px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .filtro-hora { margin:15px 0; display:flex; align-items:center; gap:10px; }
+        .filtro-hora select { padding:8px 12px; border-radius:8px; border:1px solid var(--color-borde); background:var(--color-blanco); min-width:200px; font-size:1rem; }
+        .tabla-contenedor { max-height:350px; overflow-y:auto; margin-top:20px; }
+        table { width:100%; border-collapse:collapse; background:var(--color-blanco); border-radius:10px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
+        th { background:var(--color-primario); color:#5a4a1f; font-weight:600; padding:14px 12px; text-align:left; border-bottom:2px solid var(--color-primario-oscuro); white-space:nowrap; position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; }
+        th:hover { background:#e0d2a7; }
+        th .indicador { font-size:0.8rem; margin-left:5px; color:#5a4a1f; }
+        td { padding:12px; border-bottom:1px solid var(--color-borde); vertical-align:middle; }
+        tr:nth-child(even) { background-color:#fcf9f2; }
+        tr:hover { background-color:#f5efdd; }
+        .rojo { color:var(--color-rojo); font-weight:bold; }
+        #resumen,#resumenChat,#resumenCierre { margin-top:20px; font-size:1.1rem; font-weight:600; background:#f0ead6; padding:12px 20px; border-radius:8px; display:inline-block; }
+        .mensaje-vacio { text-align:center; padding:30px; font-size:1.2rem; color:#999; }
+        #graficosContainer,#graficosContainerChat { margin-top:40px; border-top:2px solid var(--color-primario); padding-top:20px; }
+        #graficosContainer h3,#graficosContainerChat h3 { color:var(--color-primario-oscuro); margin-bottom:20px; text-align:center; }
+        .graficos-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+        @media (min-width:700px) { .graficos-grid { grid-template-columns:repeat(3,1fr); } }
+        .grafico-card { background:var(--color-blanco); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); padding:15px; transition:all 0.3s; }
+        .grafico-card:hover { box-shadow:0 8px 20px rgba(0,0,0,0.12); transform:translateY(-3px); }
+        .grafico-card canvas { width:100% !important; height:280px !important; max-height:280px; }
+        .dashboard-acciones { display:flex; justify-content:center; gap:15px; margin-top:25px; flex-wrap:wrap; }
+        .btn-dashboard { padding:12px 24px; border:none; border-radius:8px; font-weight:600; font-size:1rem; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+        .btn-copiar-texto { background-color:#25D366; color:white; }
+        .btn-copiar-texto:hover { background-color:#1ebe5b; }
+        .btn-descargar-tabla { background-color:#6c757d; color:white; }
+        .btn-descargar-tabla:hover { background-color:#5a6268; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>📋 Auditoría de Respuestas</h1>
     <p class="subtitulo">Analice conversaciones con tiempos altos en primera respuesta de asesor, en chat y cierres sin respuesta.</p>
-
-    <!-- Pestañas -->
     <div class="tabs">
         <button class="tab active" data-tab="tab1">Auditoría Primera Respuesta</button>
         <button class="tab" data-tab="tab2">Tiempos de respuesta en CHAT</button>
         <button class="tab" data-tab="tab3">Cierre sin respuesta</button>
     </div>
 
-    <!-- Contenido Pestaña 1 -->
+    <!-- Pestaña 1 -->
     <div id="tab1" class="tab-content">
         <div class="zona-carga">
             <label for="archivos1" class="boton-carga" id="botonCarga1">
@@ -228,18 +81,15 @@
             </label>
             <input type="file" id="archivos1" multiple accept=".csv">
             <div class="estado-carga" id="estadoCarga1">Cargando datos de supervisores...</div>
-            <div class="barra-progreso" id="barraProgreso1">
-                <div class="progreso" id="progreso1"></div>
-            </div>
+            <div class="barra-progreso" id="barraProgreso1"><div class="progreso" id="progreso1"></div></div>
         </div>
 
-        <div class="filtro-skill">
-            <label for="filtroSkill1"><strong>Filtrar por Skill:</strong></label>
-            <select id="filtroSkill1" multiple size="3"></select>
+        <div class="filtro-hora">
+            <label for="filtroHora1"><strong>Filtrar por Hora:</strong></label>
+            <select id="filtroHora1" multiple size="5"></select>
         </div>
 
         <div id="resumen"></div>
-
         <div class="tabla-contenedor">
             <table id="tabla1">
                 <thead>
@@ -257,12 +107,10 @@
             </table>
         </div>
 
-        <!-- Dashboard de gráficos tabla 1 (tres gráficas) -->
         <div id="graficosContainer">
             <h3>📊 Estadísticas de Tiempos Altos Primeras respuestas</h3>
             <div class="graficos-grid">
                 <div class="grafico-card"><canvas id="grafico1"></canvas></div>
-                <!-- Se eliminó grafico2 -->
                 <div class="grafico-card"><canvas id="grafico3"></canvas></div>
                 <div class="grafico-card"><canvas id="grafico4"></canvas></div>
             </div>
@@ -273,17 +121,15 @@
         </div>
     </div>
 
-    <!-- Contenido Pestaña 2 -->
-    <div id="tab2" class="tab-content" style="display: none;">
+    <!-- Pestaña 2 -->
+    <div id="tab2" class="tab-content" style="display:none;">
         <div id="mensajeChat" class="mensaje-vacio">Cargue el archivo en la pestaña principal</div>
-        <div id="contenidoChat" style="display: none;">
-            <div class="filtro-skill">
-                <label for="filtroSkill2"><strong>Filtrar por Skill:</strong></label>
-                <select id="filtroSkill2" multiple size="3"></select>
+        <div id="contenidoChat" style="display:none;">
+            <div class="filtro-hora">
+                <label for="filtroHora2"><strong>Filtrar por Hora:</strong></label>
+                <select id="filtroHora2" multiple size="5"></select>
             </div>
-
             <div id="resumenChat"></div>
-
             <div class="tabla-contenedor">
                 <table id="tabla2">
                     <thead>
@@ -300,13 +146,10 @@
                     <tbody></tbody>
                 </table>
             </div>
-
-            <!-- Dashboard de gráficos tabla 2 (tres gráficas) -->
             <div id="graficosContainerChat">
                 <h3>📊 Estadísticas de Tiempos Altos en Chat</h3>
                 <div class="graficos-grid">
                     <div class="grafico-card"><canvas id="grafico1Chat"></canvas></div>
-                    <!-- Se eliminó grafico2Chat -->
                     <div class="grafico-card"><canvas id="grafico3Chat"></canvas></div>
                     <div class="grafico-card"><canvas id="grafico4Chat"></canvas></div>
                 </div>
@@ -318,17 +161,15 @@
         </div>
     </div>
 
-    <!-- Contenido Pestaña 3: Cierre sin respuesta -->
-    <div id="tab3" class="tab-content" style="display: none;">
+    <!-- Pestaña 3 -->
+    <div id="tab3" class="tab-content" style="display:none;">
         <div id="mensajeCierre" class="mensaje-vacio">Cargue el archivo en la pestaña principal</div>
-        <div id="contenidoCierre" style="display: none;">
-            <div class="filtro-skill">
-                <label for="filtroSkill3"><strong>Filtrar por Skill:</strong></label>
-                <select id="filtroSkill3" multiple size="3"></select>
+        <div id="contenidoCierre" style="display:none;">
+            <div class="filtro-hora">
+                <label for="filtroHora3"><strong>Filtrar por Hora:</strong></label>
+                <select id="filtroHora3" multiple size="5"></select>
             </div>
-
             <div id="resumenCierre"></div>
-
             <div class="tabla-contenedor">
                 <table id="tabla3">
                     <thead>
@@ -357,13 +198,10 @@
     let procesando1 = false;
     let registrosGlobales = [];
     let datosCargados = false;
-
     let resultadosTabla1 = [], resultadosTabla2 = [], resultadosTabla3 = [];
-    let skillsDisponibles = new Set();
-    let sortState = { tabla1: { col: 6, dir: 'desc' }, tabla2: { col: 6, dir: 'desc' }, tabla3: { col: 6, dir: 'desc' } };
-    let filtrosActivosTabla1 = { agentes: new Set(), supervisores: new Set() };
-    let filtrosActivosTabla2 = { agentes: new Set(), supervisores: new Set() };
-
+    let sortState = { tabla1:{col:6,dir:'desc'}, tabla2:{col:6,dir:'desc'}, tabla3:{col:6,dir:'desc'} };
+    let filtrosActivosTabla1 = { agentes:new Set(), supervisores:new Set() };
+    let filtrosActivosTabla2 = { agentes:new Set(), supervisores:new Set() };
     let chart1, chart3, chart4;
     let chart1Chat, chart3Chat, chart4Chat;
     let datosGrafico1 = [], datosGrafico3 = [], datosGrafico4 = [];
@@ -378,43 +216,17 @@
             const response = await fetch(url);
             if (!response.ok) throw new Error("No se pudo descargar el archivo Excel");
             const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            const workbook = XLSX.read(arrayBuffer, { type:"array" });
             const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
-            datosSupervisores = XLSX.utils.sheet_to_json(primeraHoja, { defval: "" });
+            datosSupervisores = XLSX.utils.sheet_to_json(primeraHoja, { defval:"" });
             supervisoresCargados = true;
             estado.textContent = `Datos de supervisores cargados (${datosSupervisores.length} registros).`;
-            poblarFiltrosSkill();
         } catch (error) {
             estado.textContent = "Error al cargar datos de supervisores: " + error.message;
             console.error(error);
         }
     }
     cargarSupervisores();
-
-    function poblarFiltrosSkill() {
-        for (let fila of datosSupervisores) {
-            const area = obtenerValor(fila, "Area");
-            if (area && area.trim() !== "") skillsDisponibles.add(area.trim());
-        }
-        skillsDisponibles.add("SAC");
-
-        for (let filtroId of ["filtroSkill1", "filtroSkill2", "filtroSkill3"]) {
-            const select = document.getElementById(filtroId);
-            if (!select) continue;
-            select.innerHTML = "";
-            for (let skill of Array.from(skillsDisponibles).sort()) {
-                const option = document.createElement("option");
-                option.value = skill;
-                option.textContent = skill;
-                if (skill === "SAC") option.selected = true;
-                select.appendChild(option);
-            }
-        }
-
-        document.getElementById("filtroSkill1")?.addEventListener("change", filtrarTabla1);
-        document.getElementById("filtroSkill2")?.addEventListener("change", filtrarTabla2);
-        document.getElementById("filtroSkill3")?.addEventListener("change", filtrarTabla3);
-    }
 
     function obtenerSkill(asesor) {
         const asesorNormalizado = asesor.trim().toLowerCase();
@@ -441,38 +253,6 @@
         }
         return 'No encontrado';
     }
-
-    document.querySelectorAll('.tab').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            const tabId = this.getAttribute('data-tab');
-            document.getElementById(tabId).style.display = 'block';
-
-            if (tabId === 'tab2') {
-                if (datosCargados) {
-                    document.getElementById('mensajeChat').style.display = 'none';
-                    document.getElementById('contenidoChat').style.display = 'block';
-                    filtrarTabla2();
-                } else {
-                    document.getElementById('mensajeChat').style.display = 'block';
-                    document.getElementById('contenidoChat').style.display = 'none';
-                }
-            }
-
-            if (tabId === 'tab3') {
-                if (datosCargados) {
-                    document.getElementById('mensajeCierre').style.display = 'none';
-                    document.getElementById('contenidoCierre').style.display = 'block';
-                    filtrarTabla3();
-                } else {
-                    document.getElementById('mensajeCierre').style.display = 'block';
-                    document.getElementById('contenidoCierre').style.display = 'none';
-                }
-            }
-        });
-    });
 
     function obtenerValor(obj, nombre) {
         let clave = Object.keys(obj).find(k => k.trim().toLowerCase() === nombre.toLowerCase());
@@ -523,15 +303,41 @@
         return null;
     }
 
-    function aplicarFiltroYOrden(tablaId, resultados, filtroSkillId, filtrosActivos) {
-        const filtroSkill = document.getElementById(filtroSkillId);
-        if (!filtroSkill) return resultados;
-        const skillsSeleccionados = Array.from(filtroSkill.selectedOptions).map(opt => opt.value);
-        let filtrados = resultados.filter(r => skillsSeleccionados.includes(r.skill));
+    function extraerHora(fechaTexto) {
+        if (!fechaTexto) return '';
+        const partes = String(fechaTexto).trim().split(' ');
+        if (partes.length >= 2) {
+            const horaParte = partes[1].split(':');
+            return horaParte[0] || '';
+        }
+        const match = String(fechaTexto).match(/(\d{1,2}):/);
+        return match ? match[1] : '';
+    }
+
+    // Filtro por horas
+    function aplicarFiltroYOrden(tablaId, resultados, filtroHoraId, filtrosActivos) {
+        // Solo skill SAC
+        let filtrados = resultados.filter(r => r.skill === 'SAC');
 
         if (filtrosActivos) {
             if (filtrosActivos.agentes && filtrosActivos.agentes.size > 0) filtrados = filtrados.filter(r => filtrosActivos.agentes.has(r.asesor));
             if (filtrosActivos.supervisores && filtrosActivos.supervisores.size > 0) filtrados = filtrados.filter(r => filtrosActivos.supervisores.has(r.supervisor));
+        }
+
+        // Filtro por horas seleccionadas
+        const selectHora = document.getElementById(filtroHoraId);
+        if (selectHora) {
+            const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
+            if (horasSeleccionadas.length > 0) {
+                filtrados = filtrados.filter(r => {
+                    let fechaTexto = '';
+                    if (tablaId === 'tabla1') fechaTexto = r.fechaRespuesta;
+                    else if (tablaId === 'tabla2') fechaTexto = r.fechaAsesor;
+                    else if (tablaId === 'tabla3') fechaTexto = r.fechaCierre;
+                    const hora = extraerHora(fechaTexto);
+                    return horasSeleccionadas.includes(hora);
+                });
+            }
         }
 
         const state = sortState[tablaId];
@@ -576,34 +382,30 @@
 
         const freq = {};
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
-        const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
-        datosGrafico1 = freqArray.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
-        const labels1 = freqArray.map(item => item[0]);
-        const data1 = freqArray.map(item => item[1]);
+        const freqArray = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        datosGrafico1 = freqArray.map(([asesor,cantidad])=>({Agente:asesor,Veces:cantidad}));
+        const labels1 = freqArray.map(item=>item[0]);
+        const data1 = freqArray.map(item=>item[1]);
 
-        const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
-        datosGrafico3 = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
-        const labels3 = topTiempo.map(r => r.asesor);
-        const data3 = topTiempo.map(r => r.minutos);
+        const topTiempo = [...resultadosFiltrados].sort((a,b)=>b.minutos-a.minutos).slice(0,5);
+        datosGrafico3 = topTiempo.map(r=>({Agente:r.asesor,TiempoMin:r.minutos}));
+        const labels3 = topTiempo.map(r=>r.asesor);
+        const data3 = topTiempo.map(r=>r.minutos);
 
         const freqSup = {};
-        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
-        const supArray = Object.entries(freqSup).sort((a,b) => b[1] - a[1]).slice(0,5);
-        datosGrafico4 = supArray.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
-        const labels4 = supArray.map(item => item[0]);
-        const data4 = supArray.map(item => item[1]);
+        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor]||0)+1);
+        const supArray = Object.entries(freqSup).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        datosGrafico4 = supArray.map(([supervisor,cantidad])=>({Supervisor:supervisor,Veces:cantidad}));
+        const labels4 = supArray.map(item=>item[0]);
+        const data4 = supArray.map(item=>item[1]);
 
-        const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
-        const defaultColor = '#EBD59B', selectedColor = '#FFA500';
-        function getBarColor(tipo, label) {
-            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return selectedColor;
-            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor;
-            return defaultColor;
-        }
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#333', font:{weight:'bold', size:12} };
+        const defaultColor='#EBD59B', selectedColor='#FFA500';
+        function getBarColor(tipo,label){ if(tipo==='agente' && filtrosActivos.agentes.has(label)) return selectedColor; if(tipo==='supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor; return defaultColor; }
 
-        chart1 = new Chart(document.getElementById('grafico1'), { type: 'bar', data: { labels: labels1, datasets: [{ label: 'Número de respuestas', data: data1, backgroundColor: labels1.map(l => getBarColor('agente', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla1('agentes', chart1.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más respuestas' } } } });
-        chart3 = new Chart(document.getElementById('grafico3'), { type: 'bar', data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: labels3.map(l => getBarColor('agente', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla1('agentes', chart3.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } } });
-        chart4 = new Chart(document.getElementById('grafico4'), { type: 'bar', data: { labels: labels4, datasets: [{ label: 'Número de respuestas', data: data4, backgroundColor: labels4.map(l => getBarColor('supervisor', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla1('supervisores', chart4.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 supervisores con más casos' } } } });
+        chart1 = new Chart(document.getElementById('grafico1'), { type:'bar', data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart1.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con más respuestas' } } } });
+        chart3 = new Chart(document.getElementById('grafico3'), { type:'bar', data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart3.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con tiempos altos' } } } });
+        chart4 = new Chart(document.getElementById('grafico4'), { type:'bar', data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map(l=>getBarColor('supervisor',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('supervisores', chart4.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 supervisores con más casos' } } } });
     }
 
     function toggleFiltroTabla1(tipo, valor) {
@@ -619,34 +421,30 @@
 
         const freq = {};
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
-        const freqArray = Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0,5);
-        datosGrafico1Chat = freqArray.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
-        const labels1 = freqArray.map(item => item[0]);
-        const data1 = freqArray.map(item => item[1]);
+        const freqArray = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        datosGrafico1Chat = freqArray.map(([asesor,cantidad])=>({Agente:asesor,Veces:cantidad}));
+        const labels1 = freqArray.map(item=>item[0]);
+        const data1 = freqArray.map(item=>item[1]);
 
-        const topTiempo = [...resultadosFiltrados].sort((a,b) => b.minutos - a.minutos).slice(0,5);
-        datosGrafico3Chat = topTiempo.map(r => ({ Agente: r.asesor, TiempoMin: r.minutos }));
-        const labels3 = topTiempo.map(r => r.asesor);
-        const data3 = topTiempo.map(r => r.minutos);
+        const topTiempo = [...resultadosFiltrados].sort((a,b)=>b.minutos-a.minutos).slice(0,5);
+        datosGrafico3Chat = topTiempo.map(r=>({Agente:r.asesor,TiempoMin:r.minutos}));
+        const labels3 = topTiempo.map(r=>r.asesor);
+        const data3 = topTiempo.map(r=>r.minutos);
 
         const freqSup = {};
-        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
-        const supArray = Object.entries(freqSup).sort((a,b) => b[1] - a[1]).slice(0,5);
-        datosGrafico4Chat = supArray.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
-        const labels4 = supArray.map(item => item[0]);
-        const data4 = supArray.map(item => item[1]);
+        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor]||0)+1);
+        const supArray = Object.entries(freqSup).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        datosGrafico4Chat = supArray.map(([supervisor,cantidad])=>({Supervisor:supervisor,Veces:cantidad}));
+        const labels4 = supArray.map(item=>item[0]);
+        const data4 = supArray.map(item=>item[1]);
 
-        const datalabelsConfig = { anchor: 'center', align: 'center', color: '#333', font: { weight: 'bold', size: 12 } };
-        const defaultColor = '#EBD59B', selectedColor = '#FFA500';
-        function getBarColor(tipo, label) {
-            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return selectedColor;
-            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor;
-            return defaultColor;
-        }
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#333', font:{weight:'bold', size:12} };
+        const defaultColor='#EBD59B', selectedColor='#FFA500';
+        function getBarColor(tipo,label){ if(tipo==='agente' && filtrosActivos.agentes.has(label)) return selectedColor; if(tipo==='supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor; return defaultColor; }
 
-        chart1Chat = new Chart(document.getElementById('grafico1Chat'), { type: 'bar', data: { labels: labels1, datasets: [{ label: 'Número de respuestas', data: data1, backgroundColor: labels1.map(l => getBarColor('agente', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla2('agentes', chart1Chat.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con más respuestas' } } } });
-        chart3Chat = new Chart(document.getElementById('grafico3Chat'), { type: 'bar', data: { labels: labels3, datasets: [{ label: 'Tiempo (min)', data: data3, backgroundColor: labels3.map(l => getBarColor('agente', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla2('agentes', chart3Chat.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 agentes con tiempos altos' } } } });
-        chart4Chat = new Chart(document.getElementById('grafico4Chat'), { type: 'bar', data: { labels: labels4, datasets: [{ label: 'Número de respuestas', data: data4, backgroundColor: labels4.map(l => getBarColor('supervisor', l)), borderColor: '#c9b57a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, elements) => { if (elements.length) toggleFiltroTabla2('supervisores', chart4Chat.data.labels[elements[0].index]); }, plugins: { datalabels: datalabelsConfig, title: { display: true, text: 'Top 5 supervisores con más casos' } } } });
+        chart1Chat = new Chart(document.getElementById('grafico1Chat'), { type:'bar', data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart1Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con más respuestas' } } } });
+        chart3Chat = new Chart(document.getElementById('grafico3Chat'), { type:'bar', data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart3Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con tiempos altos' } } } });
+        chart4Chat = new Chart(document.getElementById('grafico4Chat'), { type:'bar', data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map(l=>getBarColor('supervisor',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('supervisores', chart4Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 supervisores con más casos' } } } });
     }
 
     function toggleFiltroTabla2(tipo, valor) {
@@ -658,12 +456,12 @@
     function copiarTextoCombinado(datos1, datos3, tituloGeneral) {
         const secciones = [];
         if (datos1 && datos1.length > 0) {
-            const top2 = datos1.slice(0, 2);
+            const top2 = datos1.slice(0,2);
             const lineas = top2.map(d => ` • *${d.Agente}*: ${d.Veces} respuestas`);
             secciones.push("📊 Top 2 agentes con más respuestas fuera de tiempo\n" + lineas.join('\n'));
         }
         if (datos3 && datos3.length > 0) {
-            const top2 = datos3.slice(0, 2);
+            const top2 = datos3.slice(0,2);
             const lineas = top2.map(d => ` • *${d.Agente}*: ${d.TiempoMin} min`);
             secciones.push("📊 Top 2 mayores tiempos registrados\n" + lineas.join('\n'));
         }
@@ -704,7 +502,7 @@
                 const archivo = archivos[i];
                 const texto = await archivo.text();
                 let resultado;
-                try { resultado = Papa.parse(texto, { header: true, skipEmptyLines: true, delimitersToGuess: [",", ";", "\t", "|"] }); }
+                try { resultado = Papa.parse(texto, { header:true, skipEmptyLines:true, delimitersToGuess:[",",";","\t","|"] }); }
                 catch (parseError) { throw new Error(`Error al parsear ${archivo.name}: ${parseError.message}`); }
                 if (resultado.data.length > MAX_FILAS) throw new Error(`El archivo ${archivo.name} tiene demasiadas filas (${resultado.data.length}). Máximo permitido: ${MAX_FILAS}.`);
                 registros = registros.concat(resultado.data);
@@ -716,6 +514,11 @@
             analizarDatosPrimeraRespuesta(registros);
             analizarDatosChat(registros);
             analizarDatosCierre(registros);
+            poblarFiltrosHora(); // Llena selects y selecciona todas
+            // Volver a filtrar para que se muestren los datos con todas las horas seleccionadas
+            filtrarTabla1();
+            filtrarTabla2();
+            filtrarTabla3();
             estadoCarga.textContent = `Procesamiento completado. Archivos cargados: ${archivos.length}`;
         } catch (error) {
             estadoCarga.textContent = "Error al procesar archivos: " + error.message;
@@ -724,6 +527,38 @@
             procesando1 = false;
             setTimeout(() => { barra.style.display = 'none'; progreso.style.width = '0%'; }, 1500);
         }
+    }
+
+    function poblarFiltrosHora() {
+        const horasTabla1 = new Set();
+        resultadosTabla1.forEach(r => { const h = extraerHora(r.fechaRespuesta); if (h) horasTabla1.add(h); });
+        const horasTabla2 = new Set();
+        resultadosTabla2.forEach(r => { const h = extraerHora(r.fechaAsesor); if (h) horasTabla2.add(h); });
+        const horasTabla3 = new Set();
+        resultadosTabla3.forEach(r => { const h = extraerHora(r.fechaCierre); if (h) horasTabla3.add(h); });
+
+        llenarSelectHora('filtroHora1', horasTabla1);
+        llenarSelectHora('filtroHora2', horasTabla2);
+        llenarSelectHora('filtroHora3', horasTabla3);
+
+        document.getElementById('filtroHora1').addEventListener('change', filtrarTabla1);
+        document.getElementById('filtroHora2').addEventListener('change', filtrarTabla2);
+        document.getElementById('filtroHora3').addEventListener('change', filtrarTabla3);
+    }
+
+    function llenarSelectHora(selectId, horasSet) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = '';
+        const horasOrdenadas = Array.from(horasSet).sort((a,b) => parseInt(a)-parseInt(b));
+        horasOrdenadas.forEach(hora => {
+            const option = document.createElement('option');
+            option.value = hora;
+            option.textContent = hora + ':00';
+            select.appendChild(option);
+        });
+        // Seleccionar todas por defecto
+        Array.from(select.options).forEach(opt => opt.selected = true);
     }
 
     function analizarDatosPrimeraRespuesta(datos) {
@@ -775,7 +610,7 @@
     }
 
     function filtrarTabla1() {
-        const filtrados = aplicarFiltroYOrden('tabla1', resultadosTabla1, "filtroSkill1", filtrosActivosTabla1);
+        const filtrados = aplicarFiltroYOrden('tabla1', resultadosTabla1, 'filtroHora1', filtrosActivosTabla1);
         currentFilteredTable1 = filtrados;
         mostrarResultadosPrimeraRespuesta(filtrados);
         actualizarIndicadores('tabla1');
@@ -836,7 +671,7 @@
 
     function filtrarTabla2() {
         if (!datosCargados) return;
-        const filtrados = aplicarFiltroYOrden('tabla2', resultadosTabla2, "filtroSkill2", filtrosActivosTabla2);
+        const filtrados = aplicarFiltroYOrden('tabla2', resultadosTabla2, 'filtroHora2', filtrosActivosTabla2);
         currentFilteredTable2 = filtrados;
         mostrarResultadosChat(filtrados);
         actualizarIndicadores('tabla2');
@@ -902,7 +737,7 @@
 
     function filtrarTabla3() {
         if (!datosCargados) return;
-        const filtrados = aplicarFiltroYOrden('tabla3', resultadosTabla3, "filtroSkill3");
+        const filtrados = aplicarFiltroYOrden('tabla3', resultadosTabla3, 'filtroHora3');
         mostrarResultadosCierre(filtrados);
         actualizarIndicadores('tabla3');
     }
@@ -947,7 +782,35 @@
             else if (tablaId === 'tabla3') filtrarTabla3();
         });
     });
-</script>
 
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            const tabId = this.getAttribute('data-tab');
+            document.getElementById(tabId).style.display = 'block';
+
+            if (tabId === 'tab2') {
+                if (datosCargados) {
+                    document.getElementById('mensajeChat').style.display = 'none';
+                    document.getElementById('contenidoChat').style.display = 'block';
+                } else {
+                    document.getElementById('mensajeChat').style.display = 'block';
+                    document.getElementById('contenidoChat').style.display = 'none';
+                }
+            }
+            if (tabId === 'tab3') {
+                if (datosCargados) {
+                    document.getElementById('mensajeCierre').style.display = 'none';
+                    document.getElementById('contenidoCierre').style.display = 'block';
+                } else {
+                    document.getElementById('mensajeCierre').style.display = 'block';
+                    document.getElementById('contenidoCierre').style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
 </body>
 </html>
