@@ -314,9 +314,7 @@
         return match ? match[1] : '';
     }
 
-    // Filtro por horas
     function aplicarFiltroYOrden(tablaId, resultados, filtroHoraId, filtrosActivos) {
-        // Solo skill SAC
         let filtrados = resultados.filter(r => r.skill === 'SAC');
 
         if (filtrosActivos) {
@@ -324,7 +322,6 @@
             if (filtrosActivos.supervisores && filtrosActivos.supervisores.size > 0) filtrados = filtrados.filter(r => filtrosActivos.supervisores.has(r.supervisor));
         }
 
-        // Filtro por horas seleccionadas
         const selectHora = document.getElementById(filtroHoraId);
         if (selectHora) {
             const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
@@ -375,6 +372,17 @@
         });
     }
 
+    // Función para truncar el nombre de agente (solo antes del @)
+    function truncarNombreAgente(nombre) {
+        return nombre.split('@')[0];
+    }
+
+    function colorDegradado(valor, maxValor, seleccionado = false) {
+        if (seleccionado) return 'rgba(255, 165, 0, 0.9)';
+        const alpha = 0.3 + (0.6 * (valor / maxValor));
+        return `rgba(238, 35, 35, ${alpha})`;
+    }
+
     function actualizarGraficosTabla1(resultadosFiltrados, filtrosActivos) {
         if (chart1) chart1.destroy();
         if (chart3) chart3.destroy();
@@ -384,28 +392,113 @@
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
         const freqArray = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
         datosGrafico1 = freqArray.map(([asesor,cantidad])=>({Agente:asesor,Veces:cantidad}));
-        const labels1 = freqArray.map(item=>item[0]);
+        // Aplicar truncado a etiquetas
+        const labels1 = freqArray.map(item => truncarNombreAgente(item[0]));
         const data1 = freqArray.map(item=>item[1]);
+        const max1 = Math.max(...data1, 1);
 
         const topTiempo = [...resultadosFiltrados].sort((a,b)=>b.minutos-a.minutos).slice(0,5);
         datosGrafico3 = topTiempo.map(r=>({Agente:r.asesor,TiempoMin:r.minutos}));
-        const labels3 = topTiempo.map(r=>r.asesor);
+        const labels3 = topTiempo.map(r => truncarNombreAgente(r.asesor));
         const data3 = topTiempo.map(r=>r.minutos);
+        const max3 = Math.max(...data3, 1);
 
         const freqSup = {};
         resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor]||0)+1);
         const supArray = Object.entries(freqSup).sort((a,b)=>b[1]-a[1]).slice(0,5);
         datosGrafico4 = supArray.map(([supervisor,cantidad])=>({Supervisor:supervisor,Veces:cantidad}));
-        const labels4 = supArray.map(item=>item[0]);
+        const labels4 = supArray.map(item=>item[0]); // supervisores sin truncar
         const data4 = supArray.map(item=>item[1]);
+        const max4 = Math.max(...data4, 1);
 
-        const datalabelsConfig = { anchor:'center', align:'center', color:'#333', font:{weight:'bold', size:12} };
-        const defaultColor='#EBD59B', selectedColor='#FFA500';
-        function getBarColor(tipo,label){ if(tipo==='agente' && filtrosActivos.agentes.has(label)) return selectedColor; if(tipo==='supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor; return defaultColor; }
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:12} };
 
-        chart1 = new Chart(document.getElementById('grafico1'), { type:'bar', data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart1.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con más respuestas' } } } });
-        chart3 = new Chart(document.getElementById('grafico3'), { type:'bar', data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart3.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con tiempos altos' } } } });
-        chart4 = new Chart(document.getElementById('grafico4'), { type:'bar', data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map(l=>getBarColor('supervisor',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('supervisores', chart4.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 supervisores con más casos' } } } });
+        function getBarColor(tipo, label, valor, maxValor) {
+            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return colorDegradado(valor, maxValor, true);
+            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return colorDegradado(valor, maxValor, true);
+            return colorDegradado(valor, maxValor, false);
+        }
+
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            borderRadius: 8,
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { display: false }, ticks: { display: false } }
+            },
+            plugins: {
+                datalabels: datalabelsConfig,
+                legend: { display: false }
+            },
+            onClick: null
+        };
+
+        chart1 = new Chart(document.getElementById('grafico1'), {
+            type:'bar',
+            data:{
+                labels:labels1,
+                datasets:[{
+                    label:'Número de respuestas',
+                    data:data1,
+                    backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart1.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Respuestas fuera de tiempo por agente' }
+                }
+            }
+        });
+
+        chart3 = new Chart(document.getElementById('grafico3'), {
+            type:'bar',
+            data:{
+                labels:labels3,
+                datasets:[{
+                    label:'Tiempo (min)',
+                    data:data3,
+                    backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart3.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Respuestas con más minutos de espera (Minutos)' }
+                }
+            }
+        });
+
+        chart4 = new Chart(document.getElementById('grafico4'), {
+            type:'bar',
+            data:{
+                labels:labels4,
+                datasets:[{
+                    label:'Número de respuestas',
+                    data:data4,
+                    backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('supervisores', chart4.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Total de respuestas fuera de tiempo por equipo' }
+                }
+            }
+        });
     }
 
     function toggleFiltroTabla1(tipo, valor) {
@@ -423,13 +516,15 @@
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
         const freqArray = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
         datosGrafico1Chat = freqArray.map(([asesor,cantidad])=>({Agente:asesor,Veces:cantidad}));
-        const labels1 = freqArray.map(item=>item[0]);
+        const labels1 = freqArray.map(item => truncarNombreAgente(item[0]));
         const data1 = freqArray.map(item=>item[1]);
+        const max1 = Math.max(...data1, 1);
 
         const topTiempo = [...resultadosFiltrados].sort((a,b)=>b.minutos-a.minutos).slice(0,5);
         datosGrafico3Chat = topTiempo.map(r=>({Agente:r.asesor,TiempoMin:r.minutos}));
-        const labels3 = topTiempo.map(r=>r.asesor);
+        const labels3 = topTiempo.map(r => truncarNombreAgente(r.asesor));
         const data3 = topTiempo.map(r=>r.minutos);
+        const max3 = Math.max(...data3, 1);
 
         const freqSup = {};
         resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor]||0)+1);
@@ -437,20 +532,118 @@
         datosGrafico4Chat = supArray.map(([supervisor,cantidad])=>({Supervisor:supervisor,Veces:cantidad}));
         const labels4 = supArray.map(item=>item[0]);
         const data4 = supArray.map(item=>item[1]);
+        const max4 = Math.max(...data4, 1);
 
-        const datalabelsConfig = { anchor:'center', align:'center', color:'#333', font:{weight:'bold', size:12} };
-        const defaultColor='#EBD59B', selectedColor='#FFA500';
-        function getBarColor(tipo,label){ if(tipo==='agente' && filtrosActivos.agentes.has(label)) return selectedColor; if(tipo==='supervisor' && filtrosActivos.supervisores.has(label)) return selectedColor; return defaultColor; }
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:12} };
 
-        chart1Chat = new Chart(document.getElementById('grafico1Chat'), { type:'bar', data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart1Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con más respuestas' } } } });
-        chart3Chat = new Chart(document.getElementById('grafico3Chat'), { type:'bar', data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map(l=>getBarColor('agente',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart3Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 agentes con tiempos altos' } } } });
-        chart4Chat = new Chart(document.getElementById('grafico4Chat'), { type:'bar', data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map(l=>getBarColor('supervisor',l)), borderColor:'#c9b57a', borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('supervisores', chart4Chat.data.labels[elements[0].index]); }, plugins:{ datalabels:datalabelsConfig, title:{ display:true, text:'Top 5 supervisores con más casos' } } } });
+        function getBarColor(tipo, label, valor, maxValor) {
+            if (tipo === 'agente' && filtrosActivos.agentes.has(label)) return colorDegradado(valor, maxValor, true);
+            if (tipo === 'supervisor' && filtrosActivos.supervisores.has(label)) return colorDegradado(valor, maxValor, true);
+            return colorDegradado(valor, maxValor, false);
+        }
+
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            borderRadius: 8,
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { display: false }, ticks: { display: false } }
+            },
+            plugins: {
+                datalabels: datalabelsConfig,
+                legend: { display: false }
+            },
+            onClick: null
+        };
+
+        chart1Chat = new Chart(document.getElementById('grafico1Chat'), {
+            type:'bar',
+            data:{
+                labels:labels1,
+                datasets:[{
+                    label:'Número de respuestas',
+                    data:data1,
+                    backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart1Chat.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Respuestas fuera de tiempo por agente' }
+                }
+            }
+        });
+
+        chart3Chat = new Chart(document.getElementById('grafico3Chat'), {
+            type:'bar',
+            data:{
+                labels:labels3,
+                datasets:[{
+                    label:'Tiempo (min)',
+                    data:data3,
+                    backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart3Chat.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Respuestas con más minutos de espera (Minutos)' }
+                }
+            }
+        });
+
+        chart4Chat = new Chart(document.getElementById('grafico4Chat'), {
+            type:'bar',
+            data:{
+                labels:labels4,
+                datasets:[{
+                    label:'Número de respuestas',
+                    data:data4,
+                    backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)),
+                    borderWidth:0,
+                    borderRadius: 8
+                }]
+            },
+            options:{
+                ...commonOptions,
+                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('supervisores', chart4Chat.data.labels[elements[0].index]); },
+                plugins:{
+                    ...commonOptions.plugins,
+                    title: { display: true, text: 'Total de respuestas fuera de tiempo por equipo' }
+                }
+            }
+        });
     }
 
     function toggleFiltroTabla2(tipo, valor) {
         const set = filtrosActivosTabla2[tipo];
         set.has(valor) ? set.delete(valor) : set.add(valor);
         filtrarTabla2();
+    }
+
+    // Función para construir el título del WhatsApp con horas filtradas
+    function construirTituloWhatsApp(tablaId) {
+        const selectHora = document.getElementById(tablaId === 'tabla1' ? 'filtroHora1' : 'filtroHora2');
+        if (!selectHora) return '';
+        const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
+        let horasTexto = '';
+        if (horasSeleccionadas.length === 0) {
+            horasTexto = 'todas las horas';
+        } else if (horasSeleccionadas.length === 1) {
+            horasTexto = `las ${horasSeleccionadas[0]}:00 hrs`;
+        } else {
+            horasTexto = `las ${horasSeleccionadas.join(', ')} hrs`;
+        }
+        return `📢 Compartimos el detalle de los tiempos elevados en ${tablaId === 'tabla1' ? 'primeras respuestas' : 'chat'} (Mayores a 10 minutos desde ${horasTexto}):`;
     }
 
     function copiarTextoCombinado(datos1, datos3, tituloGeneral) {
@@ -470,9 +663,15 @@
         navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
     }
 
-    document.getElementById('btnCopiarTexto1').addEventListener('click', () => copiarTextoCombinado(datosGrafico1, datosGrafico3, "📢 Compartimos el detalle de los tiempos elevados en primeras respuestas (Mayores a 10 minutos):"));
+    document.getElementById('btnCopiarTexto1').addEventListener('click', () => {
+        const titulo = construirTituloWhatsApp('tabla1');
+        copiarTextoCombinado(datosGrafico1, datosGrafico3, titulo);
+    });
     document.getElementById('btnDescargarTabla1').addEventListener('click', () => descargarExcel(currentFilteredTable1, 'tabla_primera_respuesta.xlsx'));
-    document.getElementById('btnCopiarTexto2').addEventListener('click', () => copiarTextoCombinado(datosGrafico1Chat, datosGrafico3Chat, "📢 Compartimos el detalle de los tiempos elevados en chat (Mayores a 10 minutos):"));
+    document.getElementById('btnCopiarTexto2').addEventListener('click', () => {
+        const titulo = construirTituloWhatsApp('tabla2');
+        copiarTextoCombinado(datosGrafico1Chat, datosGrafico3Chat, titulo);
+    });
     document.getElementById('btnDescargarTabla2').addEventListener('click', () => descargarExcel(currentFilteredTable2, 'tabla_chat.xlsx'));
 
     function descargarExcel(datos, nombreArchivo) {
@@ -514,8 +713,8 @@
             analizarDatosPrimeraRespuesta(registros);
             analizarDatosChat(registros);
             analizarDatosCierre(registros);
-            poblarFiltrosHora(); // Llena selects y selecciona todas
-            // Volver a filtrar para que se muestren los datos con todas las horas seleccionadas
+            poblarFiltrosHora();
+            // Volver a filtrar para mostrar todas las horas seleccionadas
             filtrarTabla1();
             filtrarTabla2();
             filtrarTabla3();
@@ -557,7 +756,6 @@
             option.textContent = hora + ':00';
             select.appendChild(option);
         });
-        // Seleccionar todas por defecto
         Array.from(select.options).forEach(opt => opt.selected = true);
     }
 
