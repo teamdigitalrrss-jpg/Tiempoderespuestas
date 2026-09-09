@@ -372,7 +372,6 @@
         });
     }
 
-    // Función para truncar el nombre de agente (solo antes del @)
     function truncarNombreAgente(nombre) {
         return nombre.split('@')[0];
     }
@@ -392,7 +391,6 @@
         resultadosFiltrados.forEach(r => freq[r.asesor] = (freq[r.asesor] || 0) + 1);
         const freqArray = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
         datosGrafico1 = freqArray.map(([asesor,cantidad])=>({Agente:asesor,Veces:cantidad}));
-        // Aplicar truncado a etiquetas
         const labels1 = freqArray.map(item => truncarNombreAgente(item[0]));
         const data1 = freqArray.map(item=>item[1]);
         const max1 = Math.max(...data1, 1);
@@ -407,7 +405,7 @@
         resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor]||0)+1);
         const supArray = Object.entries(freqSup).sort((a,b)=>b[1]-a[1]).slice(0,5);
         datosGrafico4 = supArray.map(([supervisor,cantidad])=>({Supervisor:supervisor,Veces:cantidad}));
-        const labels4 = supArray.map(item=>item[0]); // supervisores sin truncar
+        const labels4 = supArray.map(item=>item[0]);
         const data4 = supArray.map(item=>item[1]);
         const max4 = Math.max(...data4, 1);
 
@@ -448,10 +446,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart1.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico1[index].Agente;
+                        toggleFiltroTabla1('agentes', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Respuestas fuera de tiempo por agente' }
+                    title:{ display:true, text:'Respuestas fuera de tiempo por agente' }
                 }
             }
         });
@@ -470,10 +474,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('agentes', chart3.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico3[index].Agente;
+                        toggleFiltroTabla1('agentes', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Respuestas con más minutos de espera (Minutos)' }
+                    title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' }
                 }
             }
         });
@@ -492,10 +502,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla1('supervisores', chart4.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico4[index].Supervisor;
+                        toggleFiltroTabla1('supervisores', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Total de respuestas fuera de tiempo por equipo' }
+                    title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' }
                 }
             }
         });
@@ -571,10 +587,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart1Chat.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico1Chat[index].Agente;
+                        toggleFiltroTabla2('agentes', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Respuestas fuera de tiempo por agente' }
+                    title:{ display:true, text:'Respuestas fuera de tiempo por agente' }
                 }
             }
         });
@@ -593,10 +615,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('agentes', chart3Chat.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico3Chat[index].Agente;
+                        toggleFiltroTabla2('agentes', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Respuestas con más minutos de espera (Minutos)' }
+                    title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' }
                 }
             }
         });
@@ -615,10 +643,16 @@
             },
             options:{
                 ...commonOptions,
-                onClick:(e,elements)=>{ if(elements.length) toggleFiltroTabla2('supervisores', chart4Chat.data.labels[elements[0].index]); },
+                onClick:(e,elements)=>{
+                    if(elements.length) {
+                        const index = elements[0].index;
+                        const nombreCompleto = datosGrafico4Chat[index].Supervisor;
+                        toggleFiltroTabla2('supervisores', nombreCompleto);
+                    }
+                },
                 plugins:{
                     ...commonOptions.plugins,
-                    title: { display: true, text: 'Total de respuestas fuera de tiempo por equipo' }
+                    title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' }
                 }
             }
         });
@@ -630,7 +664,6 @@
         filtrarTabla2();
     }
 
-    // Función para construir el título del WhatsApp con horas filtradas
     function construirTituloWhatsApp(tablaId) {
         const selectHora = document.getElementById(tablaId === 'tabla1' ? 'filtroHora1' : 'filtroHora2');
         if (!selectHora) return '';
@@ -714,7 +747,6 @@
             analizarDatosChat(registros);
             analizarDatosCierre(registros);
             poblarFiltrosHora();
-            // Volver a filtrar para mostrar todas las horas seleccionadas
             filtrarTabla1();
             filtrarTabla2();
             filtrarTabla3();
