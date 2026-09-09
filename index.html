@@ -9,7 +9,6 @@
     <!-- Librerías -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Chart.js y plugin de etiquetas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
@@ -861,7 +860,7 @@
     function analizarDatosChat(datos) {
         datos.forEach(fila => fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")));
         datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
-        resultadosTabla2 = [];
+        const resultados = [];
         for (let i = 0; i < datos.length; i++) {
             const fila = datos[i];
             const remoto = obtenerValor(fila, "Remoto").trim();
@@ -879,23 +878,39 @@
                 if (movil2 !== movil) continue;
                 if (movil2.includes("@")) continue;
                 const agenteIntermedio = obtenerValor(siguiente, "Agente").trim().toLowerCase();
-                if (agenteIntermedio === "na" || agenteIntermedio === "system") { conversacionValida = false; break; }
+                if (agenteIntermedio === "na" || agenteIntermedio === "system") {
+                    conversacionValida = false;
+                    break;
+                }
                 const remoto2 = obtenerValor(siguiente, "Remoto").trim();
                 if (remoto2 !== "0") continue;
                 const agenteAsesor = obtenerValor(siguiente, "Agente").trim();
-                if (agenteAsesor.toLowerCase() === "na" || agenteAsesor.toLowerCase() === "system") { conversacionValida = false; break; }
+                if (agenteAsesor.toLowerCase() === "na" || agenteAsesor.toLowerCase() === "system") {
+                    conversacionValida = false;
+                    break;
+                }
                 const fechaAsesor = siguiente._fechaParseada;
                 if (!fechaAsesor) { conversacionValida = false; break; }
                 const minutos = Math.round((fechaAsesor - fechaCliente) / 60000);
                 if (minutos > 10) {
                     const supervisor = obtenerSupervisor(agenteAsesor);
                     const skill = obtenerSkill(agenteAsesor);
-                    resultadosTabla2.push({ horaCliente: obtenerValor(fila, "Fecha"), movil, asesor: agenteAsesor, supervisor, skill, fechaAsesor: obtenerValor(siguiente, "Fecha"), minutos });
+                    resultados.push({ horaCliente: obtenerValor(fila, "Fecha"), movil, asesor: agenteAsesor, supervisor, skill, fechaAsesor: obtenerValor(siguiente, "Fecha"), minutos });
                 }
                 break;
             }
             if (!conversacionValida) continue;
         }
+
+        // Eliminar duplicados exactos
+        const vistos = new Set();
+        resultadosTabla2 = resultados.filter(r => {
+            const clave = `${r.horaCliente}|${r.movil}|${r.asesor}|${r.supervisor}|${r.skill}|${r.fechaAsesor}|${r.minutos}`;
+            if (vistos.has(clave)) return false;
+            vistos.add(clave);
+            return true;
+        });
+
         filtrarTabla2();
     }
 
