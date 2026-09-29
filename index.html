@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditoría de Respuestas</title>
 
-    <!-- Librerías -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,7 +18,7 @@
         .container { width:100%; max-width:1200px; background:var(--color-blanco); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); padding:30px; }
         h1 { color:var(--color-primario-oscuro); font-size:2rem; margin-bottom:10px; border-bottom:3px solid var(--color-primario); padding-bottom:10px; }
         .subtitulo { color:#666; margin-bottom:25px; }
-        .tabs { display:flex; gap:10px; margin-bottom:25px; border-bottom:2px solid var(--color-primario); padding-bottom:10px; }
+        .tabs { display:flex; gap:10px; margin-bottom:25px; border-bottom:2px solid var(--color-primario); padding-bottom:10px; flex-wrap:wrap; }
         .tab { background:none; border:none; padding:10px 20px; font-size:1rem; font-weight:600; color:#666; cursor:pointer; border-radius:8px 8px 0 0; transition:all 0.3s; }
         .tab:hover { background-color:#f0ead6; }
         .tab.active { background-color:var(--color-primario); color:#5a4a1f; border-bottom:2px solid var(--color-primario-oscuro); }
@@ -35,7 +34,7 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         .filtro-hora { margin:15px 0; display:flex; align-items:center; gap:10px; }
         .filtro-hora select { padding:8px 12px; border-radius:8px; border:1px solid var(--color-borde); background:var(--color-blanco); min-width:200px; font-size:1rem; }
-        .tabla-contenedor { max-height:350px; overflow-y:auto; margin-top:20px; }
+        .tabla-contenedor { max-height:450px; overflow-y:auto; margin-top:20px; }
         table { width:100%; border-collapse:collapse; background:var(--color-blanco); border-radius:10px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
         th { background:var(--color-primario); color:#5a4a1f; font-weight:600; padding:14px 12px; text-align:left; border-bottom:2px solid var(--color-primario-oscuro); white-space:nowrap; position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; }
         th:hover { background:#e0d2a7; }
@@ -44,7 +43,7 @@
         tr:nth-child(even) { background-color:#fcf9f2; }
         tr:hover { background-color:#f5efdd; }
         .rojo { color:var(--color-rojo); font-weight:bold; }
-        #resumen,#resumenChat,#resumenCierre { margin-top:20px; font-size:1.1rem; font-weight:600; background:#f0ead6; padding:12px 20px; border-radius:8px; display:inline-block; }
+        #resumen,#resumenChat,#resumenCierre,#resumenMensajes { margin-top:20px; font-size:1.1rem; font-weight:600; background:#f0ead6; padding:12px 20px; border-radius:8px; display:inline-block; }
         .mensaje-vacio { text-align:center; padding:30px; font-size:1.2rem; color:#999; }
         #graficosContainer,#graficosContainerChat { margin-top:40px; border-top:2px solid var(--color-primario); padding-top:20px; }
         #graficosContainer h3,#graficosContainerChat h3 { color:var(--color-primario-oscuro); margin-bottom:20px; text-align:center; }
@@ -69,6 +68,7 @@
         <button class="tab active" data-tab="tab1">Auditoría Primera Respuesta</button>
         <button class="tab" data-tab="tab2">Tiempos de respuesta en CHAT</button>
         <button class="tab" data-tab="tab3">Cierre sin respuesta</button>
+        <button class="tab" data-tab="tab4">Mensajes cortos asesor</button>
     </div>
 
     <!-- Pestaña 1 -->
@@ -187,6 +187,55 @@
             </div>
         </div>
     </div>
+
+    <!-- Pestaña 4: Mensajes cortos asesor -->
+    <div id="tab4" class="tab-content" style="display:none;">
+        <div id="mensajeMensajes" class="mensaje-vacio">Cargue el archivo en la pestaña principal</div>
+        <div id="contenidoMensajes" style="display:none;">
+            <div class="filtro-hora">
+                <label for="filtroHora4"><strong>Filtrar por Hora:</strong></label>
+                <select id="filtroHora4" multiple size="5"></select>
+            </div>
+            <div id="resumenMensajes"></div>
+            <div class="tabla-contenedor">
+                <table id="tabla4">
+                    <thead>
+                        <tr>
+                            <th data-col="0">Fecha <span class="indicador"></span></th>
+                            <th data-col="1">Móvil <span class="indicador"></span></th>
+                            <th data-col="2">Asesor <span class="indicador"></span></th>
+                            <th data-col="3">Supervisor <span class="indicador"></span></th>
+                            <th data-col="4">Mensajes <span class="indicador"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div id="graficosContainerMensajes" style="margin-top:40px;border-top:2px solid var(--color-primario);padding-top:20px;">
+                <h3 style="color:var(--color-primario-oscuro);margin-bottom:20px;text-align:center;">📊 Estadísticas de Mensajes Cortos y Seguidos</h3>
+                <div class="graficos-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                    <div class="grafico-card">
+                        <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Mensajes cortos por asesor</h4>
+                        <canvas id="graficoMensajes"></canvas>
+                    </div>
+                    <div class="grafico-card">
+                        <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Varios mensajes seguidos por asesor</h4>
+                        <canvas id="graficoMensajesSeguidos"></canvas>
+                    </div>
+                    <div class="grafico-card">
+                        <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Incidencias por supervisor</h4>
+                        <canvas id="graficoMensajesSupervisor"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-acciones">
+                <button class="btn-dashboard btn-copiar-texto" id="btnCopiarTextoMensajes">📋 Copiar texto WhatsApp (todo)</button>
+                <button class="btn-dashboard btn-descargar-tabla" id="btnDescargarTabla4">📥 Descargar Excel de la tabla</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -197,15 +246,21 @@
     let procesando1 = false;
     let registrosGlobales = [];
     let datosCargados = false;
-    let resultadosTabla1 = [], resultadosTabla2 = [], resultadosTabla3 = [];
-    let sortState = { tabla1:{col:6,dir:'desc'}, tabla2:{col:6,dir:'desc'}, tabla3:{col:6,dir:'desc'} };
+    let resultadosTabla1 = [], resultadosTabla2 = [], resultadosTabla3 = [], resultadosTabla4 = [];
+    let sortState = { tabla1:{col:6,dir:'desc'}, tabla2:{col:6,dir:'desc'}, tabla3:{col:6,dir:'desc'}, tabla4:{col:0,dir:'desc'} };
     let filtrosActivosTabla1 = { agentes:new Set(), supervisores:new Set() };
     let filtrosActivosTabla2 = { agentes:new Set(), supervisores:new Set() };
     let chart1, chart3, chart4;
     let chart1Chat, chart3Chat, chart4Chat;
+    let chartMensajes;
+    let chartMensajesSeguidos;
+    let chartMensajesSupervisor;
     let datosGrafico1 = [], datosGrafico3 = [], datosGrafico4 = [];
     let datosGrafico1Chat = [], datosGrafico3Chat = [], datosGrafico4Chat = [];
-    let currentFilteredTable1 = [], currentFilteredTable2 = [];
+    let datosGraficoMensajes = [];
+    let datosGraficoMensajesSeguidos = [];
+    let datosGraficoMensajesSupervisor = [];
+    let currentFilteredTable1 = [], currentFilteredTable2 = [], currentFilteredTable4 = [];
 
     async function cargarSupervisores() {
         const url = "https://raw.githubusercontent.com/teamdigitalrrss-jpg/tNPS-diario/main/Licencias.xlsx";
@@ -313,6 +368,24 @@
         return match ? match[1] : '';
     }
 
+    function contarPalabras(texto) {
+        if (!texto) return 0;
+        const limpio = texto.trim();
+        if (limpio === "") return 0;
+        return limpio.split(/\s+/).filter(p => p !== "").length;
+    }
+
+    function esMensajeMultimedia(texto) {
+        if (!texto) return true;
+        const t = texto.trim().toLowerCase();
+        if (t === "") return true;
+        const palabrasReservadas = ['image', 'audio', 'video', 'document', 'sticker', 'gif', 'location', 'contact', 'file', 'attachment', 'imagen', 'archivo', 'documento', 'ubicación', 'contacto', 'multimedia', 'media', 'photo', 'foto'];
+        if (palabrasReservadas.includes(t)) return true;
+        const palabras = t.split(/\s+/);
+        if (palabras.length <= 2 && palabras.some(p => palabrasReservadas.includes(p))) return true;
+        return false;
+    }
+
     function aplicarFiltroYOrden(tablaId, resultados, filtroHoraId, filtrosActivos) {
         let filtrados = resultados.filter(r => r.skill === 'SAC');
 
@@ -330,6 +403,7 @@
                     if (tablaId === 'tabla1') fechaTexto = r.fechaRespuesta;
                     else if (tablaId === 'tabla2') fechaTexto = r.fechaAsesor;
                     else if (tablaId === 'tabla3') fechaTexto = r.fechaCierre;
+                    else if (tablaId === 'tabla4') fechaTexto = r.fecha;
                     const hora = extraerHora(fechaTexto);
                     return horasSeleccionadas.includes(hora);
                 });
@@ -341,11 +415,11 @@
             filtrados.sort((a, b) => {
                 let valA, valB;
                 switch(state.col) {
-                    case 0: valA = a.fechaAsignacion || a.horaCliente || a.fechaAsignacion; valB = b.fechaAsignacion || b.horaCliente || b.fechaAsignacion; break;
+                    case 0: valA = a.fechaAsignacion || a.horaCliente || a.fecha || ''; valB = b.fechaAsignacion || b.horaCliente || b.fecha || ''; break;
                     case 1: valA = a.movil; valB = b.movil; break;
                     case 2: valA = a.asesor; valB = b.asesor; break;
                     case 3: valA = a.supervisor; valB = b.supervisor; break;
-                    case 4: valA = a.skill; valB = b.skill; break;
+                    case 4: valA = a.skill || (a.mensajes ? a.mensajes.join(' ') : ''); valB = b.skill || (b.mensajes ? b.mensajes.join(' ') : ''); break;
                     case 5: valA = a.fechaRespuesta || a.fechaAsesor || a.fechaCierre; valB = b.fechaRespuesta || b.fechaAsesor || b.fechaCierre; break;
                     case 6: valA = a.minutos; valB = b.minutos; break;
                     default: valA = ''; valB = '';
@@ -371,9 +445,7 @@
         });
     }
 
-    function truncarNombreAgente(nombre) {
-        return nombre.split('@')[0];
-    }
+    function truncarNombreAgente(nombre) { return nombre.split('@')[0]; }
 
     function colorDegradado(valor, maxValor, seleccionado = false) {
         if (seleccionado) return 'rgba(255, 165, 0, 0.9)';
@@ -417,102 +489,26 @@
         }
 
         const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            borderRadius: 8,
-            scales: {
-                x: { grid: { display: false } },
-                y: { grid: { display: false }, ticks: { display: false } }
-            },
-            plugins: {
-                datalabels: datalabelsConfig,
-                legend: { display: false }
-            },
+            responsive: true, maintainAspectRatio: false, borderRadius: 8,
+            scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { display: false } } },
+            plugins: { datalabels: datalabelsConfig, legend: { display: false } },
             onClick: null
         };
 
         chart1 = new Chart(document.getElementById('grafico1'), {
             type:'bar',
-            data:{
-                labels:labels1,
-                datasets:[{
-                    label:'Número de respuestas',
-                    data:data1,
-                    backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico1[index].Agente;
-                        toggleFiltroTabla1('agentes', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Respuestas fuera de tiempo por agente' }
-                }
-            }
+            data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla1('agentes', datosGrafico1[el[0].index].Agente); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Respuestas fuera de tiempo por agente' } } }
         });
-
         chart3 = new Chart(document.getElementById('grafico3'), {
             type:'bar',
-            data:{
-                labels:labels3,
-                datasets:[{
-                    label:'Tiempo (min)',
-                    data:data3,
-                    backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico3[index].Agente;
-                        toggleFiltroTabla1('agentes', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' }
-                }
-            }
+            data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla1('agentes', datosGrafico3[el[0].index].Agente); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' } } }
         });
-
         chart4 = new Chart(document.getElementById('grafico4'), {
             type:'bar',
-            data:{
-                labels:labels4,
-                datasets:[{
-                    label:'Número de respuestas',
-                    data:data4,
-                    backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico4[index].Supervisor;
-                        toggleFiltroTabla1('supervisores', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' }
-                }
-            }
+            data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla1('supervisores', datosGrafico4[el[0].index].Supervisor); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' } } }
         });
     }
 
@@ -558,102 +554,26 @@
         }
 
         const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            borderRadius: 8,
-            scales: {
-                x: { grid: { display: false } },
-                y: { grid: { display: false }, ticks: { display: false } }
-            },
-            plugins: {
-                datalabels: datalabelsConfig,
-                legend: { display: false }
-            },
+            responsive: true, maintainAspectRatio: false, borderRadius: 8,
+            scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { display: false } } },
+            plugins: { datalabels: datalabelsConfig, legend: { display: false } },
             onClick: null
         };
 
         chart1Chat = new Chart(document.getElementById('grafico1Chat'), {
             type:'bar',
-            data:{
-                labels:labels1,
-                datasets:[{
-                    label:'Número de respuestas',
-                    data:data1,
-                    backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico1Chat[index].Agente;
-                        toggleFiltroTabla2('agentes', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Respuestas fuera de tiempo por agente' }
-                }
-            }
+            data:{ labels:labels1, datasets:[{ label:'Número de respuestas', data:data1, backgroundColor:labels1.map((l,i)=>getBarColor('agente', l, data1[i], max1)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla2('agentes', datosGrafico1Chat[el[0].index].Agente); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Respuestas fuera de tiempo por agente' } } }
         });
-
         chart3Chat = new Chart(document.getElementById('grafico3Chat'), {
             type:'bar',
-            data:{
-                labels:labels3,
-                datasets:[{
-                    label:'Tiempo (min)',
-                    data:data3,
-                    backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico3Chat[index].Agente;
-                        toggleFiltroTabla2('agentes', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' }
-                }
-            }
+            data:{ labels:labels3, datasets:[{ label:'Tiempo (min)', data:data3, backgroundColor:labels3.map((l,i)=>getBarColor('agente', l, data3[i], max3)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla2('agentes', datosGrafico3Chat[el[0].index].Agente); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Respuestas con más minutos de espera (Minutos)' } } }
         });
-
         chart4Chat = new Chart(document.getElementById('grafico4Chat'), {
             type:'bar',
-            data:{
-                labels:labels4,
-                datasets:[{
-                    label:'Número de respuestas',
-                    data:data4,
-                    backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)),
-                    borderWidth:0,
-                    borderRadius: 8
-                }]
-            },
-            options:{
-                ...commonOptions,
-                onClick:(e,elements)=>{
-                    if(elements.length) {
-                        const index = elements[0].index;
-                        const nombreCompleto = datosGrafico4Chat[index].Supervisor;
-                        toggleFiltroTabla2('supervisores', nombreCompleto);
-                    }
-                },
-                plugins:{
-                    ...commonOptions.plugins,
-                    title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' }
-                }
-            }
+            data:{ labels:labels4, datasets:[{ label:'Número de respuestas', data:data4, backgroundColor:labels4.map((l,i)=>getBarColor('supervisor', l, data4[i], max4)), borderWidth:0, borderRadius:8 }] },
+            options:{ ...commonOptions, onClick:(e,el)=>{ if(el.length) toggleFiltroTabla2('supervisores', datosGrafico4Chat[el[0].index].Supervisor); }, plugins:{ ...commonOptions.plugins, title:{ display:true, text:'Total de respuestas fuera de tiempo por equipo' } } }
         });
     }
 
@@ -663,20 +583,229 @@
         filtrarTabla2();
     }
 
-    function construirTituloWhatsApp(tablaId) {
+    function actualizarGraficoMensajes(resultadosFiltrados) {
+    // Función auxiliar para generar el degradado khaki
+    function colorKhaki(valor, maxValor) {
+        // De más claro a más intenso según el valor
+        const alpha = 0.35 + (0.55 * (valor / maxValor)); // 0.35 a 0.90
+        return `rgba(240, 230, 140, ${alpha})`;
+    }
+
+    // ================= GRÁFICO 1: MENSAJES CORTOS =================
+    if (chartMensajes) chartMensajes.destroy();
+
+    const casosCortos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('corto'));
+    const freqCortos = {};
+    casosCortos.forEach(r => freqCortos[r.asesor] = (freqCortos[r.asesor] || 0) + 1);
+    const arrCortos = Object.entries(freqCortos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    if (arrCortos.length === 0) {
+        chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+        });
+    } else {
+        datosGraficoMensajes = arrCortos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+        const labels = arrCortos.map(item => truncarNombreAgente(item[0]));
+        const data = arrCortos.map(item => item[1]);
+        const maxVal = Math.max(...data, 1);
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+
+        chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Incidencias',
+                    data: data,
+                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { display: false }, ticks: { display: false } }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    legend: { display: false },
+                    title: { display: true, text: 'Asesores con mensajes cortos', color: '#5a4a1f' }
+                }
+            }
+        });
+    }
+
+    // ================= GRÁFICO 2: VARIOS MENSAJES SEGUIDOS =================
+    if (chartMensajesSeguidos) chartMensajesSeguidos.destroy();
+
+    const casosSeguidos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('seguido'));
+    const freqSeguidos = {};
+    casosSeguidos.forEach(r => freqSeguidos[r.asesor] = (freqSeguidos[r.asesor] || 0) + 1);
+    const arrSeguidos = Object.entries(freqSeguidos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    if (arrSeguidos.length === 0) {
+        chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+        });
+    } else {
+        datosGraficoMensajesSeguidos = arrSeguidos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+        const labels = arrSeguidos.map(item => truncarNombreAgente(item[0]));
+        const data = arrSeguidos.map(item => item[1]);
+        const maxVal = Math.max(...data, 1);
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+
+        chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Incidencias',
+                    data: data,
+                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { display: false }, ticks: { display: false } }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    legend: { display: false },
+                    title: { display: true, text: 'Asesores con varios mensajes seguidos', color: '#5a4a1f' }
+                }
+            }
+        });
+    }
+
+    // ================= GRÁFICO 3: INCIDENCIAS POR SUPERVISOR =================
+    if (chartMensajesSupervisor) chartMensajesSupervisor.destroy();
+
+    const freqSup = {};
+    resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
+    const arrSup = Object.entries(freqSup).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    if (arrSup.length === 0) {
+        chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+        });
+    } else {
+        datosGraficoMensajesSupervisor = arrSup.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
+        const labels = arrSup.map(item => item[0]);
+        const data = arrSup.map(item => item[1]);
+        const maxVal = Math.max(...data, 1);
+        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+
+        chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Incidencias',
+                    data: data,
+                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                    borderColor: '#c9b57a',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { display: false }, ticks: { display: false } }
+                },
+                plugins: {
+                    datalabels: datalabelsConfig,
+                    legend: { display: false },
+                    title: { display: true, text: 'Incidencias por supervisor', color: '#5a4a1f' }
+                }
+            }
+        });
+    }
+}
+
+    function construirTituloWhatsApp(tablaId, total) {
         const selectHora = document.getElementById(tablaId === 'tabla1' ? 'filtroHora1' : 'filtroHora2');
         if (!selectHora) return '';
         const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
         let horasTexto = '';
-        if (horasSeleccionadas.length === 0) {
-            horasTexto = 'todas las horas';
-        } else if (horasSeleccionadas.length === 1) {
-            horasTexto = `las ${horasSeleccionadas[0]}:00 hrs`;
-        } else {
-            horasTexto = `las ${horasSeleccionadas.join(', ')} hrs`;
-        }
-        return `📢 Compartimos el detalle de los tiempos elevados en ${tablaId === 'tabla1' ? 'primeras respuestas' : 'chat'} (Mayores a 10 minutos desde ${horasTexto}):`;
+        if (horasSeleccionadas.length === 0) horasTexto = 'todas las horas';
+        else if (horasSeleccionadas.length === 1) horasTexto = `las ${horasSeleccionadas[0]} hrs`;
+        else horasTexto = `las ${horasSeleccionadas.join(', ')} hrs`;
+        const tipo = tablaId === 'tabla1' ? 'primeras respuestas' : 'chat';
+        return `📢 Compartimos el detalle de los tiempos elevados en ${tipo}, se visualizan *${total} respuestas fuera de tiempo* (Mayores a 10 minutos desde ${horasTexto}):`;
     }
+
+    // ============= TÍTULO Y TEXTO WHATSAPP PARA MENSAJES =============
+    function construirTituloMensajesWhatsApp() {
+        const selectHora = document.getElementById('filtroHora4');
+        if (!selectHora) return '';
+        const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
+        let horasTexto = '';
+        if (horasSeleccionadas.length === 0) horasTexto = 'todas las horas';
+        else horasTexto = `las ${horasSeleccionadas.join(', ')} hrs`;
+        return `📢 Compartimos el dato de mensajes enviados por asesor y que pueden optimizarse (Incidencias desde ${horasTexto}):`;
+    }
+
+    function copiarTextoMensajes() {
+    const secciones = [];
+
+    const topCortos = (datosGraficoMensajes || []).slice(0, 2);
+    if (topCortos.length > 0) {
+        const lineas = topCortos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
+        secciones.push("📩 Top 2 agentes con mensajes cortos\n" + lineas.join('\n'));
+    }
+
+    const topSeguidos = (datosGraficoMensajesSeguidos || []).slice(0, 2);
+    if (topSeguidos.length > 0) {
+        const lineas = topSeguidos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
+        secciones.push("📩 Top 2 con varios mensajes\n" + lineas.join('\n'));
+    }
+
+    if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
+
+    // Buscar la sesión con mayor cantidad de mensajes consecutivos
+    let sesionMax = null;
+    (currentFilteredTable4 || []).forEach(r => {
+        if (!sesionMax || (r.cantidadTotal || 0) > (sesionMax.cantidadTotal || 0)) {
+            sesionMax = r;
+        }
+    });
+
+    let lineaMax = '';
+    if (sesionMax && sesionMax.cantidadTotal > 1) {
+        lineaMax = `\n\nAgente *${sesionMax.asesor}* tiene envío de ${sesionMax.cantidadTotal} mensajes consecutivos en el chat ${sesionMax.movil}.`;
+    }
+
+    const horas = Array.from(document.getElementById('filtroHora4').selectedOptions).map(opt => opt.value);
+    const horasTexto = horas.length === 0 ? 'todas las horas' : `las ${horas.join(', ')} hrs`;
+    const titulo = `*Optimización de mensajes*\n\n🔴 Compartimos el dato de mensajes enviados por asesor y que pueden optimizarse (Incidencias desde ${horasTexto}):`;
+
+    const texto = titulo + "\n\n" + secciones.join('\n\n') + lineaMax + "\n\n✅ Quedamos atentos al seguimiento.";
+    navigator.clipboard.writeText(texto)
+        .then(() => alert('Texto copiado al portapapeles'))
+        .catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
+}
 
     function copiarTextoCombinado(datos1, datos3, tituloGeneral) {
         const secciones = [];
@@ -691,24 +820,42 @@
             secciones.push("📊 Top 2 mayores tiempos registrados\n" + lineas.join('\n'));
         }
         if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
-        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\n✅ Quedamos atentos al seguimiento y las acciones correspondientes.";
+        const texto = tituloGeneral + "\n\n" + secciones.join('\n\n') + "\n\n✅ Quedamos atentos al seguimiento.";
         navigator.clipboard.writeText(texto).then(() => alert('Texto copiado al portapapeles')).catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
     }
 
     document.getElementById('btnCopiarTexto1').addEventListener('click', () => {
-        const titulo = construirTituloWhatsApp('tabla1');
+        const total = currentFilteredTable1.length;
+        const titulo = construirTituloWhatsApp('tabla1', total);
         copiarTextoCombinado(datosGrafico1, datosGrafico3, titulo);
     });
     document.getElementById('btnDescargarTabla1').addEventListener('click', () => descargarExcel(currentFilteredTable1, 'tabla_primera_respuesta.xlsx'));
     document.getElementById('btnCopiarTexto2').addEventListener('click', () => {
-        const titulo = construirTituloWhatsApp('tabla2');
+        const total = currentFilteredTable2.length;
+        const titulo = construirTituloWhatsApp('tabla2', total);
         copiarTextoCombinado(datosGrafico1Chat, datosGrafico3Chat, titulo);
     });
     document.getElementById('btnDescargarTabla2').addEventListener('click', () => descargarExcel(currentFilteredTable2, 'tabla_chat.xlsx'));
+    document.getElementById('btnCopiarTextoMensajes').addEventListener('click', () => { copiarTextoMensajes(); });
+    document.getElementById('btnDescargarTabla4').addEventListener('click', () => descargarExcel(currentFilteredTable4, 'tabla_mensajes_cortos.xlsx'));
 
     function descargarExcel(datos, nombreArchivo) {
         if (!datos || datos.length === 0) { alert('No hay datos para exportar'); return; }
-        const ws = XLSX.utils.json_to_sheet(datos);
+
+        const datosPlano = datos.map(fila => {
+            const filaPlana = {};
+            Object.keys(fila).forEach(clave => {
+                const valor = fila[clave];
+                if (Array.isArray(valor)) {
+                    filaPlana[clave] = valor.join('\n');
+                } else {
+                    filaPlana[clave] = valor;
+                }
+            });
+            return filaPlana;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(datosPlano);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Tabla');
         XLSX.writeFile(wb, nombreArchivo);
@@ -745,10 +892,12 @@
             analizarDatosPrimeraRespuesta(registros);
             analizarDatosChat(registros);
             analizarDatosCierre(registros);
+            analizarMensajesCortos(registros);
             poblarFiltrosHora();
             filtrarTabla1();
             filtrarTabla2();
             filtrarTabla3();
+            filtrarTabla4();
             estadoCarga.textContent = `Procesamiento completado. Archivos cargados: ${archivos.length}`;
         } catch (error) {
             estadoCarga.textContent = "Error al procesar archivos: " + error.message;
@@ -760,20 +909,20 @@
     }
 
     function poblarFiltrosHora() {
-        const horasTabla1 = new Set();
-        resultadosTabla1.forEach(r => { const h = extraerHora(r.fechaRespuesta); if (h) horasTabla1.add(h); });
-        const horasTabla2 = new Set();
-        resultadosTabla2.forEach(r => { const h = extraerHora(r.fechaAsesor); if (h) horasTabla2.add(h); });
-        const horasTabla3 = new Set();
-        resultadosTabla3.forEach(r => { const h = extraerHora(r.fechaCierre); if (h) horasTabla3.add(h); });
+        const horas1 = new Set(); resultadosTabla1.forEach(r => { const h = extraerHora(r.fechaRespuesta); if (h) horas1.add(h); });
+        const horas2 = new Set(); resultadosTabla2.forEach(r => { const h = extraerHora(r.fechaAsesor); if (h) horas2.add(h); });
+        const horas3 = new Set(); resultadosTabla3.forEach(r => { const h = extraerHora(r.fechaCierre); if (h) horas3.add(h); });
+        const horas4 = new Set(); resultadosTabla4.forEach(r => { const h = extraerHora(r.fecha); if (h) horas4.add(h); });
 
-        llenarSelectHora('filtroHora1', horasTabla1);
-        llenarSelectHora('filtroHora2', horasTabla2);
-        llenarSelectHora('filtroHora3', horasTabla3);
+        llenarSelectHora('filtroHora1', horas1);
+        llenarSelectHora('filtroHora2', horas2);
+        llenarSelectHora('filtroHora3', horas3);
+        llenarSelectHora('filtroHora4', horas4);
 
         document.getElementById('filtroHora1').addEventListener('change', filtrarTabla1);
         document.getElementById('filtroHora2').addEventListener('change', filtrarTabla2);
         document.getElementById('filtroHora3').addEventListener('change', filtrarTabla3);
+        document.getElementById('filtroHora4').addEventListener('change', filtrarTabla4);
     }
 
     function llenarSelectHora(selectId, horasSet) {
@@ -878,17 +1027,11 @@
                 if (movil2 !== movil) continue;
                 if (movil2.includes("@")) continue;
                 const agenteIntermedio = obtenerValor(siguiente, "Agente").trim().toLowerCase();
-                if (agenteIntermedio === "na" || agenteIntermedio === "system") {
-                    conversacionValida = false;
-                    break;
-                }
+                if (agenteIntermedio === "na" || agenteIntermedio === "system") { conversacionValida = false; break; }
                 const remoto2 = obtenerValor(siguiente, "Remoto").trim();
                 if (remoto2 !== "0") continue;
                 const agenteAsesor = obtenerValor(siguiente, "Agente").trim();
-                if (agenteAsesor.toLowerCase() === "na" || agenteAsesor.toLowerCase() === "system") {
-                    conversacionValida = false;
-                    break;
-                }
+                if (agenteAsesor.toLowerCase() === "na" || agenteAsesor.toLowerCase() === "system") { conversacionValida = false; break; }
                 const fechaAsesor = siguiente._fechaParseada;
                 if (!fechaAsesor) { conversacionValida = false; break; }
                 const minutos = Math.round((fechaAsesor - fechaCliente) / 60000);
@@ -901,8 +1044,6 @@
             }
             if (!conversacionValida) continue;
         }
-
-        // Eliminar duplicados exactos
         const vistos = new Set();
         resultadosTabla2 = resultados.filter(r => {
             const clave = `${r.horaCliente}|${r.movil}|${r.asesor}|${r.supervisor}|${r.skill}|${r.fechaAsesor}|${r.minutos}`;
@@ -910,7 +1051,6 @@
             vistos.add(clave);
             return true;
         });
-
         filtrarTabla2();
     }
 
@@ -949,7 +1089,6 @@
             if (!texto.toLowerCase().includes("caso recibido por")) continue;
             const fechaAsignacion = fila._fechaParseada;
             if (!fechaAsignacion) continue;
-
             let hayRespuestaAsesor = false;
             let agenteCierre = "";
             let fechaCierre = null;
@@ -999,6 +1138,141 @@
         document.getElementById("resumenCierre").innerHTML = "✅ Casos de cierre sin respuesta: " + resultados.length;
     }
 
+    // ============= MENSAJES CORTOS ASESOR =============
+    // ============= MENSAJES CORTOS ASESOR =============
+function analizarMensajesCortos(datos) {
+    datos.forEach(fila => fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")));
+    datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
+
+    const porMovil = {};
+    datos.forEach(fila => {
+        const movil = obtenerValor(fila, "Movil").trim();
+        if (!movil || movil.includes("@")) return;
+        if (!porMovil[movil]) porMovil[movil] = [];
+        porMovil[movil].push(fila);
+    });
+
+    const resultados = [];
+
+    for (const movil in porMovil) {
+        const mensajes = porMovil[movil];
+        let sesionAsesor = null;
+
+        for (const fila of mensajes) {
+            const remoto = obtenerValor(fila, "Remoto").trim();
+            const agente = obtenerValor(fila, "Agente").trim();
+            const texto = obtenerValor(fila, "Texto").trim();
+
+            if (remoto === "1") {
+                if (sesionAsesor && esSesionValida(sesionAsesor)) {
+                    resultados.push(sesionAsesor);
+                }
+                sesionAsesor = null;
+                continue;
+            }
+
+            if (remoto === "0" && agente.toLowerCase().includes("@clarosv")) {
+                if (!sesionAsesor || sesionAsesor.asesor !== agente) {
+                    if (sesionAsesor && esSesionValida(sesionAsesor)) {
+                        resultados.push(sesionAsesor);
+                    }
+                    sesionAsesor = {
+                        fecha: obtenerValor(fila, "Fecha"),
+                        movil: movil,
+                        asesor: agente,
+                        supervisor: obtenerSupervisor(agente),
+                        skill: obtenerSkill(agente),
+                        cortos: [],
+                        muyCortos: [],
+                        todos: []
+                    };
+                }
+
+                if (!esMensajeMultimedia(texto)) {
+                    const palabras = contarPalabras(texto);
+                    sesionAsesor.todos.push(texto);
+                    if (palabras >= 1 && palabras <= 4) {
+                        sesionAsesor.cortos.push(texto);
+                    }
+                    if (palabras >= 1 && palabras <= 3) {
+                        sesionAsesor.muyCortos.push(texto);
+                    }
+                }
+                continue;
+            }
+
+            if (sesionAsesor && esSesionValida(sesionAsesor)) {
+                resultados.push(sesionAsesor);
+            }
+            sesionAsesor = null;
+        }
+
+        if (sesionAsesor && esSesionValida(sesionAsesor)) {
+            resultados.push(sesionAsesor);
+        }
+    }
+
+    function esSesionValida(s) {
+        return s.cortos.length >= 2 || s.todos.length > 3 || s.muyCortos.length >= 1;
+    }
+
+    function tiposAplicables(s) {
+        const tipos = [];
+        if (s.cortos.length >= 2 || s.muyCortos.length >= 1) tipos.push('corto');
+        if (s.todos.length > 3) tipos.push('seguido');
+        return tipos;
+    }
+
+    resultadosTabla4 = resultados.map(r => {
+        const tipos = tiposAplicables(r);
+        const mensajesMostrar = (r.cortos.length >= 2) ? r.cortos : r.todos;
+        return {
+            fecha: r.fecha,
+            movil: r.movil,
+            asesor: r.asesor,
+            supervisor: r.supervisor,
+            skill: r.skill,
+            mensajes: mensajesMostrar,
+            cantidadCortos: r.cortos.length,
+            cantidadMuyCortos: r.muyCortos.length,
+            cantidadTotal: r.todos.length,
+            tipos: tipos
+        };
+    });
+
+    const vistos = new Set();
+    resultadosTabla4 = resultadosTabla4.filter(r => {
+        const clave = `${r.fecha}|${r.movil}|${r.asesor}|${r.mensajes.join('||')}`;
+        if (vistos.has(clave)) return false;
+        vistos.add(clave);
+        return true;
+    });
+
+    filtrarTabla4();
+}
+
+    function filtrarTabla4() {
+        if (!datosCargados) return;
+        const filtrados = aplicarFiltroYOrden('tabla4', resultadosTabla4, 'filtroHora4');
+        currentFilteredTable4 = filtrados;
+        mostrarResultadosMensajesCortos(filtrados);
+        actualizarIndicadores('tabla4');
+        actualizarGraficoMensajes(filtrados);
+    }
+
+    function mostrarResultadosMensajesCortos(resultados) {
+        const tbody = document.querySelector("#tabla4 tbody");
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        resultados.forEach(r => {
+            const fila = document.createElement("tr");
+            const mensajesHtml = r.mensajes.map(m => `• ${m}`).join('<br>');
+            fila.innerHTML = `<td>${r.fecha}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${mensajesHtml}</td>`;
+            tbody.appendChild(fila);
+        });
+        document.getElementById("resumenMensajes").innerHTML = "✅ Casos de mensajes cortos o seguidos: " + resultados.length;
+    }
+
     function extraerAgenteCierre(texto) {
         const emailRegex = /[\w.-]+@[\w.-]+\.\w+/;
         const match = texto.match(emailRegex);
@@ -1025,6 +1299,7 @@
             if (tablaId === 'tabla1') filtrarTabla1();
             else if (tablaId === 'tabla2') filtrarTabla2();
             else if (tablaId === 'tabla3') filtrarTabla3();
+            else if (tablaId === 'tabla4') filtrarTabla4();
         });
     });
 
@@ -1052,6 +1327,15 @@
                 } else {
                     document.getElementById('mensajeCierre').style.display = 'block';
                     document.getElementById('contenidoCierre').style.display = 'none';
+                }
+            }
+            if (tabId === 'tab4') {
+                if (datosCargados) {
+                    document.getElementById('mensajeMensajes').style.display = 'none';
+                    document.getElementById('contenidoMensajes').style.display = 'block';
+                } else {
+                    document.getElementById('mensajeMensajes').style.display = 'block';
+                    document.getElementById('contenidoMensajes').style.display = 'none';
                 }
             }
         });
