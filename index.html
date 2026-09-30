@@ -205,6 +205,7 @@
                             <th data-col="1">Móvil <span class="indicador"></span></th>
                             <th data-col="2">Asesor <span class="indicador"></span></th>
                             <th data-col="3">Supervisor <span class="indicador"></span></th>
+                            <th data-col="5">Cantidad <span class="indicador"></span></th>
                             <th data-col="4">Mensajes <span class="indicador"></span></th>
                         </tr>
                     </thead>
@@ -213,7 +214,7 @@
             </div>
 
             <div id="graficosContainerMensajes" style="margin-top:40px;border-top:2px solid var(--color-primario);padding-top:20px;">
-                <h3 style="color:var(--color-primario-oscuro);margin-bottom:20px;text-align:center;">📊 Estadísticas de Mensajes Cortos y Seguidos</h3>
+                <h3 style="color:var(--color-primario-oscuro);margin-bottom:20px;text-align:center;">🔔 Alertas optimización de mensajes</h3>
                 <div class="graficos-grid" style="grid-template-columns:1fr 1fr;">
                     <div class="grafico-card">
                         <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Mensajes cortos por asesor</h4>
@@ -254,6 +255,7 @@
     let sortState = { tabla1:{col:6,dir:'desc'}, tabla2:{col:6,dir:'desc'}, tabla3:{col:6,dir:'desc'}, tabla4:{col:0,dir:'desc'} };
     let filtrosActivosTabla1 = { agentes:new Set(), supervisores:new Set() };
     let filtrosActivosTabla2 = { agentes:new Set(), supervisores:new Set() };
+    let filtrosActivosTabla4 = { agentes:new Set(), supervisores:new Set() };
     let chart1, chart3, chart4;
     let chart1Chat, chart3Chat, chart4Chat;
     let chartMensajes;
@@ -425,12 +427,13 @@
                     case 2: valA = a.asesor; valB = b.asesor; break;
                     case 3: valA = a.supervisor; valB = b.supervisor; break;
                     case 4: valA = a.skill || (a.mensajes ? a.mensajes.join(' ') : ''); valB = b.skill || (b.mensajes ? b.mensajes.join(' ') : ''); break;
-                    case 5: valA = a.fechaRespuesta || a.fechaAsesor || a.fechaCierre; valB = b.fechaRespuesta || b.fechaAsesor || b.fechaCierre; break;
-                    case 6: valA = a.minutos; valB = b.minutos; break;
+                    case 5: valA = (a.mensajes ? a.mensajes.length : 0); valB = (b.mensajes ? b.mensajes.length : 0); break;
+                    case 6: valA = a.fechaRespuesta || a.fechaAsesor || a.fechaCierre; valB = b.fechaRespuesta || b.fechaAsesor || b.fechaCierre; break;
+                    case 7: valA = a.minutos; valB = b.minutos; break;
                     default: valA = ''; valB = '';
                 }
-                if (state.col === 6) { valA = Number(valA) || 0; valB = Number(valB) || 0; }
-                else if (state.col === 0 || state.col === 5) { valA = convertirFecha(valA) || new Date(0); valB = convertirFecha(valB) || new Date(0); }
+                if (state.col === 5 || state.col === 7) { valA = Number(valA) || 0; valB = Number(valB) || 0; }
+                else if (state.col === 0 || state.col === 6) { valA = convertirFecha(valA) || new Date(0); valB = convertirFecha(valB) || new Date(0); }
                 else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); }
                 return state.dir === 'asc' ? (valA > valB ? 1 : valA < valB ? -1 : 0) : (valA < valB ? 1 : valA > valB ? -1 : 0);
             });
@@ -456,6 +459,12 @@
         if (seleccionado) return 'rgba(255, 165, 0, 0.9)';
         const alpha = 0.3 + (0.6 * (valor / maxValor));
         return `rgba(238, 35, 35, ${alpha})`;
+    }
+
+    function colorKhaki(valor, maxValor, seleccionado = false) {
+        if (seleccionado) return 'rgba(200, 170, 60, 0.95)';
+        const alpha = 0.35 + (0.55 * (valor / maxValor));
+        return `rgba(240, 230, 140, ${alpha})`;
     }
 
     function actualizarGraficosTabla1(resultadosFiltrados, filtrosActivos) {
@@ -588,12 +597,13 @@
         filtrarTabla2();
     }
 
-    function actualizarGraficoMensajes(resultadosFiltrados) {
-        function colorKhaki(valor, maxValor) {
-            const alpha = 0.35 + (0.55 * (valor / maxValor));
-            return `rgba(240, 230, 140, ${alpha})`;
-        }
+    function toggleFiltroTabla4(tipo, valor) {
+        const set = filtrosActivosTabla4[tipo];
+        set.has(valor) ? set.delete(valor) : set.add(valor);
+        filtrarTabla4();
+    }
 
+    function actualizarGraficoMensajes(resultadosFiltrados) {
         // ================= GRÁFICO 1: MENSAJES CORTOS =================
         if (chartMensajes) chartMensajes.destroy();
 
@@ -622,7 +632,7 @@
                     datasets: [{
                         label: 'Incidencias',
                         data: data,
-                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        backgroundColor: arrCortos.map((item, i) => colorKhaki(item[1], maxVal, filtrosActivosTabla4.agentes.has(item[0]))),
                         borderColor: '#c9b57a',
                         borderWidth: 1,
                         borderRadius: 8,
@@ -640,6 +650,12 @@
                         datalabels: datalabelsConfig,
                         legend: { display: false },
                         title: { display: true, text: 'Asesores con mensajes cortos', color: '#5a4a1f' }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length) {
+                            const nombre = datosGraficoMensajes[elements[0].index].Agente;
+                            toggleFiltroTabla4('agentes', nombre);
+                        }
                     }
                 }
             });
@@ -673,7 +689,7 @@
                     datasets: [{
                         label: 'Incidencias',
                         data: data,
-                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        backgroundColor: arrSeguidos.map((item) => colorKhaki(item[1], maxVal, filtrosActivosTabla4.agentes.has(item[0]))),
                         borderColor: '#c9b57a',
                         borderWidth: 1,
                         borderRadius: 8,
@@ -691,6 +707,12 @@
                         datalabels: datalabelsConfig,
                         legend: { display: false },
                         title: { display: true, text: 'Asesores con varios mensajes seguidos', color: '#5a4a1f' }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length) {
+                            const nombre = datosGraficoMensajesSeguidos[elements[0].index].Agente;
+                            toggleFiltroTabla4('agentes', nombre);
+                        }
                     }
                 }
             });
@@ -723,7 +745,7 @@
                     datasets: [{
                         label: 'Incidencias',
                         data: data,
-                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        backgroundColor: arrSup.map((item) => colorKhaki(item[1], maxVal, filtrosActivosTabla4.supervisores.has(item[0]))),
                         borderColor: '#c9b57a',
                         borderWidth: 1,
                         borderRadius: 8,
@@ -741,6 +763,12 @@
                         datalabels: datalabelsConfig,
                         legend: { display: false },
                         title: { display: true, text: 'Incidencias por supervisor', color: '#5a4a1f' }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length) {
+                            const nombre = datosGraficoMensajesSupervisor[elements[0].index].Supervisor;
+                            toggleFiltroTabla4('supervisores', nombre);
+                        }
                     }
                 }
             });
@@ -1290,8 +1318,6 @@
                 supervisor: r.supervisor,
                 skill: r.skill,
                 mensajes: mensajesMostrar,
-                cantidadCortos: r.cortos.length,
-                cantidadMuyCortos: r.muyCortos.length,
                 cantidadTotal: r.todos.length,
                 tipos: tipos
             };
@@ -1310,7 +1336,7 @@
 
     function filtrarTabla4() {
         if (!datosCargados) return;
-        const filtrados = aplicarFiltroYOrden('tabla4', resultadosTabla4, 'filtroHora4');
+        const filtrados = aplicarFiltroYOrden('tabla4', resultadosTabla4, 'filtroHora4', filtrosActivosTabla4);
         currentFilteredTable4 = filtrados;
         mostrarResultadosMensajesCortos(filtrados);
         actualizarIndicadores('tabla4');
@@ -1324,7 +1350,7 @@
         resultados.forEach(r => {
             const fila = document.createElement("tr");
             const mensajesHtml = r.mensajes.map(m => `• ${m}`).join('<br>');
-            fila.innerHTML = `<td>${r.fecha}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${mensajesHtml}</td>`;
+            fila.innerHTML = `<td>${r.fecha}</td><td>${r.movil}</td><td>${r.asesor}</td><td>${r.supervisor}</td><td>${r.mensajes.length}</td><td>${mensajesHtml}</td>`;
             tbody.appendChild(fila);
         });
         document.getElementById("resumenMensajes").innerHTML = "✅ Casos de mensajes cortos o seguidos: " + resultados.length;
