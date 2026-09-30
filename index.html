@@ -214,7 +214,7 @@
 
             <div id="graficosContainerMensajes" style="margin-top:40px;border-top:2px solid var(--color-primario);padding-top:20px;">
                 <h3 style="color:var(--color-primario-oscuro);margin-bottom:20px;text-align:center;">📊 Estadísticas de Mensajes Cortos y Seguidos</h3>
-                <div class="graficos-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="graficos-grid" style="grid-template-columns:1fr 1fr;">
                     <div class="grafico-card">
                         <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Mensajes cortos por asesor</h4>
                         <canvas id="graficoMensajes"></canvas>
@@ -226,6 +226,10 @@
                     <div class="grafico-card">
                         <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Incidencias por supervisor</h4>
                         <canvas id="graficoMensajesSupervisor"></canvas>
+                    </div>
+                    <div class="grafico-card">
+                        <h4 style="text-align:center;color:var(--color-primario-oscuro);margin-bottom:10px;font-size:1rem;">Distribución por Site</h4>
+                        <canvas id="graficoMensajesSite"></canvas>
                     </div>
                 </div>
             </div>
@@ -255,6 +259,7 @@
     let chartMensajes;
     let chartMensajesSeguidos;
     let chartMensajesSupervisor;
+    let chartMensajesSite;
     let datosGrafico1 = [], datosGrafico3 = [], datosGrafico4 = [];
     let datosGrafico1Chat = [], datosGrafico3Chat = [], datosGrafico4Chat = [];
     let datosGraficoMensajes = [];
@@ -584,165 +589,230 @@
     }
 
     function actualizarGraficoMensajes(resultadosFiltrados) {
-    // Función auxiliar para generar el degradado khaki
-    function colorKhaki(valor, maxValor) {
-        // De más claro a más intenso según el valor
-        const alpha = 0.35 + (0.55 * (valor / maxValor)); // 0.35 a 0.90
-        return `rgba(240, 230, 140, ${alpha})`;
-    }
+        function colorKhaki(valor, maxValor) {
+            const alpha = 0.35 + (0.55 * (valor / maxValor));
+            return `rgba(240, 230, 140, ${alpha})`;
+        }
 
-    // ================= GRÁFICO 1: MENSAJES CORTOS =================
-    if (chartMensajes) chartMensajes.destroy();
+        // ================= GRÁFICO 1: MENSAJES CORTOS =================
+        if (chartMensajes) chartMensajes.destroy();
 
-    const casosCortos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('corto'));
-    const freqCortos = {};
-    casosCortos.forEach(r => freqCortos[r.asesor] = (freqCortos[r.asesor] || 0) + 1);
-    const arrCortos = Object.entries(freqCortos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const casosCortos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('corto'));
+        const freqCortos = {};
+        casosCortos.forEach(r => freqCortos[r.asesor] = (freqCortos[r.asesor] || 0) + 1);
+        const arrCortos = Object.entries(freqCortos).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-    if (arrCortos.length === 0) {
-        chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
-        });
-    } else {
-        datosGraficoMensajes = arrCortos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
-        const labels = arrCortos.map(item => truncarNombreAgente(item[0]));
-        const data = arrCortos.map(item => item[1]);
-        const maxVal = Math.max(...data, 1);
-        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+        if (arrCortos.length === 0) {
+            chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+            });
+        } else {
+            datosGraficoMensajes = arrCortos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+            const labels = arrCortos.map(item => truncarNombreAgente(item[0]));
+            const data = arrCortos.map(item => item[1]);
+            const maxVal = Math.max(...data, 1);
+            const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
 
-        chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Incidencias',
-                    data: data,
-                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
-                    borderColor: '#c9b57a',
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { display: false }, ticks: { display: false } }
+            chartMensajes = new Chart(document.getElementById('graficoMensajes'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Incidencias',
+                        data: data,
+                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        borderColor: '#c9b57a',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
                 },
-                plugins: {
-                    datalabels: datalabelsConfig,
-                    legend: { display: false },
-                    title: { display: true, text: 'Asesores con mensajes cortos', color: '#5a4a1f' }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { display: false }, ticks: { display: false } }
+                    },
+                    plugins: {
+                        datalabels: datalabelsConfig,
+                        legend: { display: false },
+                        title: { display: true, text: 'Asesores con mensajes cortos', color: '#5a4a1f' }
+                    }
                 }
+            });
+        }
+
+        // ================= GRÁFICO 2: VARIOS MENSAJES SEGUIDOS =================
+        if (chartMensajesSeguidos) chartMensajesSeguidos.destroy();
+
+        const casosSeguidos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('seguido'));
+        const freqSeguidos = {};
+        casosSeguidos.forEach(r => freqSeguidos[r.asesor] = (freqSeguidos[r.asesor] || 0) + 1);
+        const arrSeguidos = Object.entries(freqSeguidos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+        if (arrSeguidos.length === 0) {
+            chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+            });
+        } else {
+            datosGraficoMensajesSeguidos = arrSeguidos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
+            const labels = arrSeguidos.map(item => truncarNombreAgente(item[0]));
+            const data = arrSeguidos.map(item => item[1]);
+            const maxVal = Math.max(...data, 1);
+            const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+
+            chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Incidencias',
+                        data: data,
+                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        borderColor: '#c9b57a',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { display: false }, ticks: { display: false } }
+                    },
+                    plugins: {
+                        datalabels: datalabelsConfig,
+                        legend: { display: false },
+                        title: { display: true, text: 'Asesores con varios mensajes seguidos', color: '#5a4a1f' }
+                    }
+                }
+            });
+        }
+
+        // ================= GRÁFICO 3: INCIDENCIAS POR SUPERVISOR =================
+        if (chartMensajesSupervisor) chartMensajesSupervisor.destroy();
+
+        const freqSup = {};
+        resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
+        const arrSup = Object.entries(freqSup).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+        if (arrSup.length === 0) {
+            chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+            });
+        } else {
+            datosGraficoMensajesSupervisor = arrSup.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
+            const labels = arrSup.map(item => item[0]);
+            const data = arrSup.map(item => item[1]);
+            const maxVal = Math.max(...data, 1);
+            const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
+
+            chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Incidencias',
+                        data: data,
+                        backgroundColor: data.map(v => colorKhaki(v, maxVal)),
+                        borderColor: '#c9b57a',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { display: false }, ticks: { display: false } }
+                    },
+                    plugins: {
+                        datalabels: datalabelsConfig,
+                        legend: { display: false },
+                        title: { display: true, text: 'Incidencias por supervisor', color: '#5a4a1f' }
+                    }
+                }
+            });
+        }
+
+        // ================= GRÁFICO 4: DISTRIBUCIÓN POR SITE =================
+        if (chartMensajesSite) chartMensajesSite.destroy();
+
+        const SUPERVISORES_SANTA_ELENA = ['jaime flores', 'soporte', 'erika martinez', 'erika martínez'];
+
+        let countSantaElena = 0;
+        let countSantaAna = 0;
+        resultadosFiltrados.forEach(r => {
+            const sup = String(r.supervisor || '').trim().toLowerCase();
+            if (SUPERVISORES_SANTA_ELENA.includes(sup)) {
+                countSantaElena++;
+            } else {
+                countSantaAna++;
             }
         });
-    }
 
-    // ================= GRÁFICO 2: VARIOS MENSAJES SEGUIDOS =================
-    if (chartMensajesSeguidos) chartMensajesSeguidos.destroy();
+        const totalSite = countSantaElena + countSantaAna;
 
-    const casosSeguidos = resultadosFiltrados.filter(r => r.tipos && r.tipos.includes('seguido'));
-    const freqSeguidos = {};
-    casosSeguidos.forEach(r => freqSeguidos[r.asesor] = (freqSeguidos[r.asesor] || 0) + 1);
-    const arrSeguidos = Object.entries(freqSeguidos).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-    if (arrSeguidos.length === 0) {
-        chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
-        });
-    } else {
-        datosGraficoMensajesSeguidos = arrSeguidos.map(([asesor, cantidad]) => ({ Agente: asesor, Veces: cantidad }));
-        const labels = arrSeguidos.map(item => truncarNombreAgente(item[0]));
-        const data = arrSeguidos.map(item => item[1]);
-        const maxVal = Math.max(...data, 1);
-        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
-
-        chartMensajesSeguidos = new Chart(document.getElementById('graficoMensajesSeguidos'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Incidencias',
-                    data: data,
-                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
-                    borderColor: '#c9b57a',
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { display: false }, ticks: { display: false } }
-                },
-                plugins: {
-                    datalabels: datalabelsConfig,
-                    legend: { display: false },
-                    title: { display: true, text: 'Asesores con varios mensajes seguidos', color: '#5a4a1f' }
+        if (totalSite === 0) {
+            chartMensajesSite = new Chart(document.getElementById('graficoMensajesSite'), {
+                type: 'doughnut',
+                data: { labels: [], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
+            });
+        } else {
+            const datalabelsConfig = {
+                color: '#5a4a1f',
+                font: { weight: 'bold', size: 13 },
+                formatter: (value, ctx) => {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct = Math.round((value / total) * 100);
+                    return pct + '%';
                 }
-            }
-        });
-    }
+            };
 
-    // ================= GRÁFICO 3: INCIDENCIAS POR SUPERVISOR =================
-    if (chartMensajesSupervisor) chartMensajesSupervisor.destroy();
-
-    const freqSup = {};
-    resultadosFiltrados.forEach(r => freqSup[r.supervisor] = (freqSup[r.supervisor] || 0) + 1);
-    const arrSup = Object.entries(freqSup).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-    if (arrSup.length === 0) {
-        chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Sin datos para mostrar' } } }
-        });
-    } else {
-        datosGraficoMensajesSupervisor = arrSup.map(([supervisor, cantidad]) => ({ Supervisor: supervisor, Veces: cantidad }));
-        const labels = arrSup.map(item => item[0]);
-        const data = arrSup.map(item => item[1]);
-        const maxVal = Math.max(...data, 1);
-        const datalabelsConfig = { anchor:'center', align:'center', color:'#5a4a1f', font:{weight:'bold', size:12} };
-
-        chartMensajesSupervisor = new Chart(document.getElementById('graficoMensajesSupervisor'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Incidencias',
-                    data: data,
-                    backgroundColor: data.map(v => colorKhaki(v, maxVal)),
-                    borderColor: '#c9b57a',
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { display: false }, ticks: { display: false } }
+            chartMensajesSite = new Chart(document.getElementById('graficoMensajesSite'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Santa Elena', 'Santa Ana'],
+                    datasets: [{
+                        data: [countSantaElena, countSantaAna],
+                        backgroundColor: ['#f0e68c', '#c9b57a'],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
                 },
-                plugins: {
-                    datalabels: datalabelsConfig,
-                    legend: { display: false },
-                    title: { display: true, text: 'Incidencias por supervisor', color: '#5a4a1f' }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '55%',
+                    plugins: {
+                        datalabels: datalabelsConfig,
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#5a4a1f', font: { weight: 'bold' } }
+                        },
+                        title: {
+                            display: true,
+                            text: `Distribución por Site (Total: ${totalSite} incidencias)`,
+                            color: '#5a4a1f'
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
     }
-}
 
     function construirTituloWhatsApp(tablaId, total) {
         const selectHora = document.getElementById(tablaId === 'tabla1' ? 'filtroHora1' : 'filtroHora2');
@@ -756,56 +826,44 @@
         return `📢 Compartimos el detalle de los tiempos elevados en ${tipo}, se visualizan *${total} respuestas fuera de tiempo* (Mayores a 10 minutos desde ${horasTexto}):`;
     }
 
-    // ============= TÍTULO Y TEXTO WHATSAPP PARA MENSAJES =============
-    function construirTituloMensajesWhatsApp() {
-        const selectHora = document.getElementById('filtroHora4');
-        if (!selectHora) return '';
-        const horasSeleccionadas = Array.from(selectHora.selectedOptions).map(opt => opt.value);
-        let horasTexto = '';
-        if (horasSeleccionadas.length === 0) horasTexto = 'todas las horas';
-        else horasTexto = `las ${horasSeleccionadas.join(', ')} hrs`;
-        return `📢 Compartimos el dato de mensajes enviados por asesor y que pueden optimizarse (Incidencias desde ${horasTexto}):`;
-    }
-
     function copiarTextoMensajes() {
-    const secciones = [];
+        const secciones = [];
 
-    const topCortos = (datosGraficoMensajes || []).slice(0, 2);
-    if (topCortos.length > 0) {
-        const lineas = topCortos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
-        secciones.push("📩 Top 2 agentes con mensajes cortos\n" + lineas.join('\n'));
-    }
-
-    const topSeguidos = (datosGraficoMensajesSeguidos || []).slice(0, 2);
-    if (topSeguidos.length > 0) {
-        const lineas = topSeguidos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
-        secciones.push("📩 Top 2 con varios mensajes\n" + lineas.join('\n'));
-    }
-
-    if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
-
-    // Buscar la sesión con mayor cantidad de mensajes consecutivos
-    let sesionMax = null;
-    (currentFilteredTable4 || []).forEach(r => {
-        if (!sesionMax || (r.cantidadTotal || 0) > (sesionMax.cantidadTotal || 0)) {
-            sesionMax = r;
+        const topCortos = (datosGraficoMensajes || []).slice(0, 2);
+        if (topCortos.length > 0) {
+            const lineas = topCortos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
+            secciones.push("📩 Top 2 agentes con mensajes cortos\n" + lineas.join('\n'));
         }
-    });
 
-    let lineaMax = '';
-    if (sesionMax && sesionMax.cantidadTotal > 1) {
-        lineaMax = `\n\nAgente *${sesionMax.asesor}* tiene envío de ${sesionMax.cantidadTotal} mensajes consecutivos en el chat ${sesionMax.movil}.`;
+        const topSeguidos = (datosGraficoMensajesSeguidos || []).slice(0, 2);
+        if (topSeguidos.length > 0) {
+            const lineas = topSeguidos.map(d => ` • *${d.Agente}*: ${d.Veces} incidencias`);
+            secciones.push("📩 Top 2 con varios mensajes\n" + lineas.join('\n'));
+        }
+
+        if (secciones.length === 0) { alert('No hay datos para generar el texto'); return; }
+
+        let sesionMax = null;
+        (currentFilteredTable4 || []).forEach(r => {
+            if (!sesionMax || (r.cantidadTotal || 0) > (sesionMax.cantidadTotal || 0)) {
+                sesionMax = r;
+            }
+        });
+
+        let lineaMax = '';
+        if (sesionMax && sesionMax.cantidadTotal > 1) {
+            lineaMax = `\n\nAgente *${sesionMax.asesor}* tiene envío de ${sesionMax.cantidadTotal} mensajes consecutivos en el chat ${sesionMax.movil}.`;
+        }
+
+        const horas = Array.from(document.getElementById('filtroHora4').selectedOptions).map(opt => opt.value);
+        const horasTexto = horas.length === 0 ? 'todas las horas' : `las ${horas.join(', ')} hrs`;
+        const titulo = `*Optimización de mensajes*\n\n🔴 Compartimos el dato de mensajes enviados por asesor y que pueden optimizarse (Incidencias desde ${horasTexto}):`;
+
+        const texto = titulo + "\n\n" + secciones.join('\n\n') + lineaMax + "\n\n✅ Quedamos atentos al seguimiento.";
+        navigator.clipboard.writeText(texto)
+            .then(() => alert('Texto copiado al portapapeles'))
+            .catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
     }
-
-    const horas = Array.from(document.getElementById('filtroHora4').selectedOptions).map(opt => opt.value);
-    const horasTexto = horas.length === 0 ? 'todas las horas' : `las ${horas.join(', ')} hrs`;
-    const titulo = `*Optimización de mensajes*\n\n🔴 Compartimos el dato de mensajes enviados por asesor y que pueden optimizarse (Incidencias desde ${horasTexto}):`;
-
-    const texto = titulo + "\n\n" + secciones.join('\n\n') + lineaMax + "\n\n✅ Quedamos atentos al seguimiento.";
-    navigator.clipboard.writeText(texto)
-        .then(() => alert('Texto copiado al portapapeles'))
-        .catch(err => { console.error('Error al copiar texto: ', err); alert('No se pudo copiar el texto'); });
-}
 
     function copiarTextoCombinado(datos1, datos3, tituloGeneral) {
         const secciones = [];
@@ -1139,117 +1197,116 @@
     }
 
     // ============= MENSAJES CORTOS ASESOR =============
-    // ============= MENSAJES CORTOS ASESOR =============
-function analizarMensajesCortos(datos) {
-    datos.forEach(fila => fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")));
-    datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
+    function analizarMensajesCortos(datos) {
+        datos.forEach(fila => fila._fechaParseada = convertirFecha(obtenerValor(fila, "Fecha")));
+        datos.sort((a, b) => (a._fechaParseada?.getTime() || 0) - (b._fechaParseada?.getTime() || 0));
 
-    const porMovil = {};
-    datos.forEach(fila => {
-        const movil = obtenerValor(fila, "Movil").trim();
-        if (!movil || movil.includes("@")) return;
-        if (!porMovil[movil]) porMovil[movil] = [];
-        porMovil[movil].push(fila);
-    });
+        const porMovil = {};
+        datos.forEach(fila => {
+            const movil = obtenerValor(fila, "Movil").trim();
+            if (!movil || movil.includes("@")) return;
+            if (!porMovil[movil]) porMovil[movil] = [];
+            porMovil[movil].push(fila);
+        });
 
-    const resultados = [];
+        const resultados = [];
 
-    for (const movil in porMovil) {
-        const mensajes = porMovil[movil];
-        let sesionAsesor = null;
+        for (const movil in porMovil) {
+            const mensajes = porMovil[movil];
+            let sesionAsesor = null;
 
-        for (const fila of mensajes) {
-            const remoto = obtenerValor(fila, "Remoto").trim();
-            const agente = obtenerValor(fila, "Agente").trim();
-            const texto = obtenerValor(fila, "Texto").trim();
+            for (const fila of mensajes) {
+                const remoto = obtenerValor(fila, "Remoto").trim();
+                const agente = obtenerValor(fila, "Agente").trim();
+                const texto = obtenerValor(fila, "Texto").trim();
 
-            if (remoto === "1") {
+                if (remoto === "1") {
+                    if (sesionAsesor && esSesionValida(sesionAsesor)) {
+                        resultados.push(sesionAsesor);
+                    }
+                    sesionAsesor = null;
+                    continue;
+                }
+
+                if (remoto === "0" && agente.toLowerCase().includes("@clarosv")) {
+                    if (!sesionAsesor || sesionAsesor.asesor !== agente) {
+                        if (sesionAsesor && esSesionValida(sesionAsesor)) {
+                            resultados.push(sesionAsesor);
+                        }
+                        sesionAsesor = {
+                            fecha: obtenerValor(fila, "Fecha"),
+                            movil: movil,
+                            asesor: agente,
+                            supervisor: obtenerSupervisor(agente),
+                            skill: obtenerSkill(agente),
+                            cortos: [],
+                            muyCortos: [],
+                            todos: []
+                        };
+                    }
+
+                    if (!esMensajeMultimedia(texto)) {
+                        const palabras = contarPalabras(texto);
+                        sesionAsesor.todos.push(texto);
+                        if (palabras >= 1 && palabras <= 4) {
+                            sesionAsesor.cortos.push(texto);
+                        }
+                        if (palabras >= 1 && palabras <= 3) {
+                            sesionAsesor.muyCortos.push(texto);
+                        }
+                    }
+                    continue;
+                }
+
                 if (sesionAsesor && esSesionValida(sesionAsesor)) {
                     resultados.push(sesionAsesor);
                 }
                 sesionAsesor = null;
-                continue;
-            }
-
-            if (remoto === "0" && agente.toLowerCase().includes("@clarosv")) {
-                if (!sesionAsesor || sesionAsesor.asesor !== agente) {
-                    if (sesionAsesor && esSesionValida(sesionAsesor)) {
-                        resultados.push(sesionAsesor);
-                    }
-                    sesionAsesor = {
-                        fecha: obtenerValor(fila, "Fecha"),
-                        movil: movil,
-                        asesor: agente,
-                        supervisor: obtenerSupervisor(agente),
-                        skill: obtenerSkill(agente),
-                        cortos: [],
-                        muyCortos: [],
-                        todos: []
-                    };
-                }
-
-                if (!esMensajeMultimedia(texto)) {
-                    const palabras = contarPalabras(texto);
-                    sesionAsesor.todos.push(texto);
-                    if (palabras >= 1 && palabras <= 4) {
-                        sesionAsesor.cortos.push(texto);
-                    }
-                    if (palabras >= 1 && palabras <= 3) {
-                        sesionAsesor.muyCortos.push(texto);
-                    }
-                }
-                continue;
             }
 
             if (sesionAsesor && esSesionValida(sesionAsesor)) {
                 resultados.push(sesionAsesor);
             }
-            sesionAsesor = null;
         }
 
-        if (sesionAsesor && esSesionValida(sesionAsesor)) {
-            resultados.push(sesionAsesor);
+        function esSesionValida(s) {
+            return s.cortos.length >= 2 || s.todos.length > 3 || s.muyCortos.length >= 1;
         }
+
+        function tiposAplicables(s) {
+            const tipos = [];
+            if (s.cortos.length >= 2 || s.muyCortos.length >= 1) tipos.push('corto');
+            if (s.todos.length > 3) tipos.push('seguido');
+            return tipos;
+        }
+
+        resultadosTabla4 = resultados.map(r => {
+            const tipos = tiposAplicables(r);
+            const mensajesMostrar = (r.cortos.length >= 2) ? r.cortos : r.todos;
+            return {
+                fecha: r.fecha,
+                movil: r.movil,
+                asesor: r.asesor,
+                supervisor: r.supervisor,
+                skill: r.skill,
+                mensajes: mensajesMostrar,
+                cantidadCortos: r.cortos.length,
+                cantidadMuyCortos: r.muyCortos.length,
+                cantidadTotal: r.todos.length,
+                tipos: tipos
+            };
+        });
+
+        const vistos = new Set();
+        resultadosTabla4 = resultadosTabla4.filter(r => {
+            const clave = `${r.fecha}|${r.movil}|${r.asesor}|${r.mensajes.join('||')}`;
+            if (vistos.has(clave)) return false;
+            vistos.add(clave);
+            return true;
+        });
+
+        filtrarTabla4();
     }
-
-    function esSesionValida(s) {
-        return s.cortos.length >= 2 || s.todos.length > 3 || s.muyCortos.length >= 1;
-    }
-
-    function tiposAplicables(s) {
-        const tipos = [];
-        if (s.cortos.length >= 2 || s.muyCortos.length >= 1) tipos.push('corto');
-        if (s.todos.length > 3) tipos.push('seguido');
-        return tipos;
-    }
-
-    resultadosTabla4 = resultados.map(r => {
-        const tipos = tiposAplicables(r);
-        const mensajesMostrar = (r.cortos.length >= 2) ? r.cortos : r.todos;
-        return {
-            fecha: r.fecha,
-            movil: r.movil,
-            asesor: r.asesor,
-            supervisor: r.supervisor,
-            skill: r.skill,
-            mensajes: mensajesMostrar,
-            cantidadCortos: r.cortos.length,
-            cantidadMuyCortos: r.muyCortos.length,
-            cantidadTotal: r.todos.length,
-            tipos: tipos
-        };
-    });
-
-    const vistos = new Set();
-    resultadosTabla4 = resultadosTabla4.filter(r => {
-        const clave = `${r.fecha}|${r.movil}|${r.asesor}|${r.mensajes.join('||')}`;
-        if (vistos.has(clave)) return false;
-        vistos.add(clave);
-        return true;
-    });
-
-    filtrarTabla4();
-}
 
     function filtrarTabla4() {
         if (!datosCargados) return;
